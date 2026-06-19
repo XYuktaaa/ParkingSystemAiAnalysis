@@ -1,1161 +1,1997 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Parking Intelligence — Bengaluru BTP</title>
-<style>
-/* ═══════════════════════════════════════════════════════
-   DESIGN TOKENS  (light-blue × lavender palette)
-═══════════════════════════════════════════════════════ */
-:root{
-  /* sky */
-  --sky-50:#f0f8ff; --sky-100:#dbeeff; --sky-200:#b6dcfe;
-  --sky-400:#60aff5; --sky-600:#2d82d4; --sky-800:#1a4f8c;
-  /* lavender */
-  --lav-50:#f5f3ff;  --lav-100:#ede9fe; --lav-200:#ddd6fe;
-  --lav-400:#a78bfa; --lav-600:#7c3aed; --lav-700:#6d28d9;
-  /* neutrals */
-  --sl-50:#f8fafc; --sl-100:#f1f5f9; --sl-200:#e2e8f0;
-  --sl-400:#94a3b8; --sl-600:#475569; --sl-800:#1e293b;
-  /* risk */
-  --critical:#ef4444; --high:#f97316; --moderate:#eab308; --low:#22c55e;
-  /* surface */
-  --bg:linear-gradient(145deg,#eef4ff 0%,#f3f0ff 100%);
-  --surface:#fff;
-  --border:#d4e2f8;
-  --radius:14px; --radius-sm:8px;
-  --shadow:0 2px 14px rgba(45,130,212,.09);
-  --shadow-md:0 6px 28px rgba(45,130,212,.14);
-}
-
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{font-family:'Inter','Segoe UI',system-ui,sans-serif;
-     background:var(--bg);color:var(--sl-800);min-height:100vh;font-size:14px;line-height:1.5}
-
-/* ── layout ── */
-.shell{display:flex;min-height:100vh}
-
-/* ── sidebar ── */
-.sidebar{
-  width:230px;flex-shrink:0;
-  background:linear-gradient(160deg,#1a4f8c 0%,#6d28d9 100%);
-  padding:26px 0 18px;display:flex;flex-direction:column;
-  position:sticky;top:0;height:100vh;z-index:20;
-}
-.sb-logo{padding:0 22px 22px;border-bottom:1px solid rgba(255,255,255,.14)}
-.sb-logo .icon{width:38px;height:38px;background:rgba(255,255,255,.18);border-radius:10px;
-  display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:8px}
-.sb-logo h1{color:#fff;font-size:14.5px;font-weight:800;line-height:1.3}
-.sb-logo p{color:rgba(255,255,255,.55);font-size:11px;margin-top:2px}
-
-.nav{flex:1;padding:14px 0}
-.ni{display:flex;align-items:center;gap:10px;padding:10px 22px;
-    color:rgba(255,255,255,.70);cursor:pointer;border-left:3px solid transparent;
-    transition:all .16s;font-size:13px;user-select:none}
-.ni:hover{background:rgba(255,255,255,.09);color:#fff}
-.ni.active{background:rgba(255,255,255,.16);color:#fff;border-left-color:#b6dcfe;font-weight:700}
-.ni .ico{font-size:16px;width:20px;text-align:center}
-
-.sb-foot{padding:14px 22px;border-top:1px solid rgba(255,255,255,.14);
-         color:rgba(255,255,255,.5);font-size:11px}
-.api-row{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:12px;color:rgba(255,255,255,.7)}
-.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}
-.dot.off{background:#ef4444}
-.dot.chk{background:#eab308;animation:blink 1s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-
-/* ── main ── */
-.main{flex:1;display:flex;flex-direction:column;min-width:0}
-
-.config-bar{
-  display:flex;align-items:center;gap:10px;padding:10px 26px;
-  background:#fff;border-bottom:1px solid var(--lav-200);
-  font-size:12.5px;flex-wrap:wrap;
-}
-.config-bar label{font-weight:700;color:var(--lav-700);white-space:nowrap}
-.config-bar input{
-  flex:1;min-width:220px;padding:5px 10px;border:1px solid var(--lav-200);
-  border-radius:var(--radius-sm);font-size:12.5px;color:var(--sl-800);background:#faf8ff;outline:none
-}
-.config-bar input:focus{border-color:var(--sky-400)}
-
-.topbar{
-  background:var(--surface);border-bottom:1px solid var(--border);
-  padding:14px 26px;display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:8px;
-}
-.topbar h2{font-size:16px;font-weight:800;color:var(--sl-800)}
-.topbar-sub{font-size:11.5px;color:var(--sl-400)}
-
-/* ── buttons ── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
-     border-radius:var(--radius-sm);border:1px solid var(--border);
-     background:var(--surface);color:var(--sky-600);font-size:12.5px;
-     font-weight:600;cursor:pointer;transition:all .14s;white-space:nowrap}
-.btn:hover{background:var(--sky-100);border-color:var(--sky-400)}
-.btn-p{background:linear-gradient(135deg,var(--sky-600),var(--lav-600));
-       color:#fff;border-color:transparent}
-.btn-p:hover{opacity:.9;background:linear-gradient(135deg,var(--sky-600),var(--lav-600))}
-.btn-sm{padding:5px 11px;font-size:11.5px}
-
-/* ── content ── */
-.content{padding:22px 26px;flex:1}
-.page{display:none}.page.active{display:block}
-
-/* ── kpi grid ── */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:14px;margin-bottom:22px}
-.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-     padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;
-             background:linear-gradient(to bottom,var(--sky-400),var(--lav-400))}
-.kpi-lbl{font-size:10.5px;color:var(--sl-400);font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-.kpi-val{font-size:26px;font-weight:900;color:var(--sky-800);margin:3px 0 1px;line-height:1}
-.kpi-sub{font-size:11px;color:var(--sl-400)}
-.kpi-ico{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:30px;opacity:.12}
-
-/* ── card ── */
-.card{background:var(--surface);border:1px solid var(--border);
-      border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:18px}
-.ch{padding:14px 18px 12px;border-bottom:1px solid var(--border);
-    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.ch h3{font-size:14px;font-weight:800}
-.ch .sub{font-size:11.5px;color:var(--sl-400);margin-top:1px}
-.cb{padding:16px 18px}
-
-/* ── two-col grid ── */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
-@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
-
-/* ── filter bar ── */
-.frow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
-.frow label{font-size:11.5px;color:var(--sl-600);font-weight:700}
-.frow select,.frow input[type=text],.frow input[type=number]{
-  padding:5px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);
-  background:var(--sky-50);color:var(--sl-800);font-size:12.5px;outline:none;transition:border-color .14s}
-.frow select:focus,.frow input:focus{border-color:var(--sky-400)}
-
-/* ── table ── */
-.tw{overflow-x:auto;border-radius:var(--radius-sm)}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-thead th{background:linear-gradient(90deg,var(--sky-100),var(--lav-100));
-          padding:9px 11px;text-align:left;font-size:11px;font-weight:800;
-          color:var(--sky-800);letter-spacing:.04em;white-space:nowrap}
-tbody tr{border-bottom:1px solid var(--border);transition:background .11s}
-tbody tr:hover{background:var(--sky-50)}
-tbody td{padding:8px 11px;color:var(--sl-600)}
-tbody td:first-child{font-weight:700;color:var(--sl-800)}
-
-/* ── badges ── */
-.badge{display:inline-flex;align-items:center;padding:2px 9px;
-       border-radius:99px;font-size:10.5px;font-weight:800;white-space:nowrap}
-.b-cr{background:#fee2e2;color:#dc2626}
-.b-hi{background:#fff7ed;color:#c2410c}
-.b-mo{background:#fefce8;color:#a16207}
-.b-lo{background:#f0fdf4;color:#15803d}
-.b-sky{background:var(--sky-100);color:var(--sky-800)}
-.b-lav{background:var(--lav-100);color:var(--lav-700)}
-.b-ok{background:#f0fdf4;color:#15803d}
-.b-err{background:#fee2e2;color:#dc2626}
-
-/* ── score bar ── */
-.sb-wrap{display:flex;align-items:center;gap:7px;min-width:120px}
-.sb-track{flex:1;height:6px;background:var(--sky-100);border-radius:3px;overflow:hidden}
-.sb-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--sky-400),var(--lav-400))}
-.sb-val{font-size:11.5px;font-weight:800;color:var(--sky-800);min-width:30px;text-align:right}
-
-/* ── horizontal bar chart ── */
-.hbar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
-.hbar-lbl{font-size:11.5px;width:190px;overflow:hidden;text-overflow:ellipsis;
-          white-space:nowrap;color:var(--sl-600);cursor:default}
-.hbar-track{flex:1;background:var(--sky-100);border-radius:4px;height:18px;overflow:hidden}
-.hbar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--sky-400),var(--lav-400));
-           transition:width .4s ease}
-.hbar-num{font-size:11.5px;font-weight:800;color:var(--sky-800);min-width:36px;text-align:right}
-
-/* ── donut ── */
-.donut-wrap{position:relative;width:130px;height:130px;margin:0 auto}
-.donut-svg{width:100%;height:100%}
-.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-              text-align:center;pointer-events:none}
-.donut-center .dc-val{font-size:18px;font-weight:900;color:var(--sky-800)}
-.donut-center .dc-lbl{font-size:10px;color:var(--sl-400);margin-top:1px}
-
-/* ── gauge ring ── */
-.gauge-grid{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-around}
-.gauge-item{text-align:center}
-.g-ring{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;
-         justify-content:center;margin:0 auto 6px;position:relative}
-.g-inner{width:50px;height:50px;background:var(--surface);border-radius:50%;
-          display:flex;align-items:center;justify-content:center;
-          font-size:13px;font-weight:900;color:var(--sky-800);z-index:1}
-.g-lbl{font-size:10.5px;color:var(--sl-400);font-weight:700}
-.g-sub{font-size:12px;font-weight:800;color:var(--sl-600);margin-top:1px}
-
-/* ── hourly heatmap ── */
-.hourly-grid{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
-.h-cell{height:34px;border-radius:3px;cursor:default;position:relative}
-.h-cell:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100%+4px);
-  left:50%;transform:translateX(-50%);background:var(--sl-800);color:#fff;
-  font-size:10.5px;padding:3px 7px;border-radius:4px;white-space:nowrap;z-index:99;pointer-events:none}
-.h-axis{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin-top:4px}
-.h-tick{font-size:9px;color:var(--sl-400);text-align:center}
-
-/* ── anomaly feed ── */
-.anom-feed{display:flex;flex-direction:column;gap:9px}
-.anom-item{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;
-           border-radius:var(--radius-sm);background:var(--sky-50);border:1px solid var(--lav-100)}
-.anom-ico{font-size:18px;flex-shrink:0;margin-top:2px}
-.anom-title{font-size:13px;font-weight:700;color:var(--sl-800)}
-.anom-meta{font-size:11px;color:var(--sl-400);margin-top:2px}
-.anom-score{margin-left:auto;flex-shrink:0;font-size:10.5px;font-weight:800;
-             color:var(--lav-600);background:var(--lav-100);padding:2px 8px;border-radius:99px}
-
-/* ── patrol optimizer ── */
-.patrol-result{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:14px}
-.patrol-zone{border:1px solid var(--border);border-radius:var(--radius);padding:14px;
-             background:linear-gradient(135deg,var(--sky-50),var(--lav-50))}
-.pz-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.pz-ico{font-size:22px}
-.pz-zone{font-size:13px;font-weight:800;color:var(--sky-800)}
-.pz-officers{font-size:11px;color:var(--sl-400)}
-.pz-junctions{font-size:11.5px;color:var(--sl-600);margin-top:4px}
-.pz-score{font-size:11px;color:var(--lav-600);font-weight:700;margin-top:3px}
-
-/* ── model cards ── */
-.model-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-.mc{border:1px solid var(--border);border-radius:var(--radius);padding:16px;
-    background:linear-gradient(135deg,var(--sky-50),var(--lav-50))}
-.mc-ico{font-size:28px;margin-bottom:6px}
-.mc-name{font-size:13.5px;font-weight:800;color:var(--sky-800);margin-bottom:5px}
-.mc-type{font-size:12px;color:var(--sl-600)}
-.mc-meta{font-size:11px;color:var(--sl-400);margin-top:3px}
-
-/* ── loading / error ── */
-.ld{text-align:center;padding:38px;color:var(--sl-400);font-size:13px}
-.spinner{width:26px;height:26px;border:3px solid var(--sky-100);border-top-color:var(--sky-400);
-         border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 10px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.err-box{background:#fff1f2;border:1px solid #fecdd3;border-radius:var(--radius-sm);
-          padding:12px 15px;color:#be123c;font-size:12.5px}
-.warn-box{background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius-sm);
-           padding:9px 13px;color:#92400e;font-size:12px;margin-bottom:10px}
-.info-box{background:var(--sky-50);border:1px solid var(--sky-200);border-radius:var(--radius-sm);
-           padding:9px 13px;color:var(--sky-800);font-size:12px;margin-bottom:10px}
-
-/* ── stat strip ── */
-.stat-strip{display:flex;flex-wrap:wrap;gap:22px}
-.ss-item .sv{font-size:22px;font-weight:900;color:var(--sky-800)}
-.ss-item .sl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--sl-400)}
-
-/* ── assumption callout ── */
-.callout{display:flex;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);
-         margin-bottom:14px}
-.callout.amber{background:#fffbeb;border:1px solid #fde68a;color:#78350f}
-.callout.blue {background:var(--sky-50);border:1px solid var(--sky-200);color:var(--sky-800)}
-.callout-ico{font-size:16px;flex-shrink:0;margin-top:1px}
-.callout-body{font-size:12px;line-height:1.6}
-.callout-body strong{font-weight:700}
-</style>
-</head>
-<body>
-<div class="shell">
-
-<!-- ══════════ SIDEBAR ══════════ -->
-<nav class="sidebar">
-  <div class="sb-logo">
-    <div class="icon">🅿️</div>
-    <h1>Parking Intelligence</h1>
-    <p>Bengaluru BTP · Jan–Apr 2024</p>
-  </div>
-  <div class="nav">
-    <div class="ni active" data-page="overview"  onclick="nav(this)"><span class="ico">📊</span> Overview</div>
-    <div class="ni" data-page="heatmap"   onclick="nav(this)"><span class="ico">🗺️</span> Hotspot Heatmap</div>
-    <div class="ni" data-page="junctions" onclick="nav(this)"><span class="ico">🛣️</span> Junction Impact</div>
-    <div class="ni" data-page="priority"  onclick="nav(this)"><span class="ico">🚨</span> Enforcement Priority</div>
-    <div class="ni" data-page="temporal"  onclick="nav(this)"><span class="ico">🕐</span> Temporal Analytics</div>
-    <div class="ni" data-page="anomalies" onclick="nav(this)"><span class="ico">⚠️</span> Anomaly Feed</div>
-    <div class="ni" data-page="patrol"    onclick="nav(this)"><span class="ico">👮</span> Patrol Optimizer</div>
-    <div class="ni" data-page="models"    onclick="nav(this)"><span class="ico">🤖</span> Model Registry</div>
-  </div>
-  <div class="sb-foot">
-    Parking Intelligence v1.0
-    <div class="api-row">
-      <span class="dot chk" id="dot"></span>
-      <span id="api-lbl">Checking…</span>
-    </div>
-  </div>
-</nav>
-
-<!-- ══════════ MAIN ══════════ -->
-<div class="main">
-
-  <!-- config bar -->
-  <div class="config-bar">
-    <label>🔌 API:</label>
-    <input id="api-input" value="http://localhost:5000" oninput="setApi(this.value)"/>
-    <button class="btn btn-p" onclick="refreshAll()">↻ Refresh All</button>
-  </div>
-
-  <!-- ═══ OVERVIEW ═══ -->
-  <div class="page active" id="page-overview">
-    <div class="topbar">
-      <div><div class="topbar h2" style="font-size:16px;font-weight:800">Overview</div>
-           <div class="topbar-sub">System-wide KPIs · pipeline artefacts</div></div>
-      <button class="btn btn-sm" onclick="loadOverview()">↻ Reload</button>
-    </div>
-    <div class="content">
-      <div class="callout amber">
-        <span class="callout-ico">⚠️</span>
-        <div class="callout-body">
-          <strong>Key assumption:</strong> No direct traffic-speed or volume data exists.
-          All congestion scores are proxies weighted by violation type (Main-road ×3 · Double-parking ×2 · Footpath ×2 · Wrong/No-park ×1) — defensible and explicitly stated to judges.
-          The 04:00–06:00 "peak" likely reflects patrol shift timing, not true violation peaks.
-        </div>
-      </div>
-      <div class="kpi-grid" id="kpi-grid"><div class="ld"><div class="spinner"></div>Loading…</div></div>
-      <div class="grid2">
-        <div class="card">
-          <div class="ch"><div><h3>Forecast Model Metrics</h3><div class="sub">XGBoost / RandomForest · 80/20 temporal split</div></div></div>
-          <div class="cb" id="metrics-cb"><div class="ld"><div class="spinner"></div></div></div>
-        </div>
-        <div class="card">
-          <div class="ch"><div><h3>Risk Distribution</h3><div class="sub">Top-10 prediction report junctions</div></div></div>
-          <div class="cb"><div class="gauge-grid" id="risk-gauges"><div class="ld"><div class="spinner"></div></div></div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ HEATMAP (bubble chart proxy) ═══ -->
-  <div class="page" id="page-heatmap">
-    <div class="topbar">
-      <div><div style="font-size:16px;font-weight:800">Hotspot Heatmap</div>
-           <div class="topbar-sub">DBSCAN clusters · bubble radius ∝ congestion-weighted severity</div></div>
-      <button class="btn btn-sm" onclick="loadHeatmap()">↻ Reload</button>
-    </div>
-    <div class="content">
-      <div class="callout blue">
-        <span class="callout-ico">ℹ️</span>
-        <div class="callout-body">
-          Showing top cluster centroids from <code>cluster_summary.csv</code>.
-          To render a true Folium map, open <code>model/parking_heatmap.html</code> in a browser — the pipeline already generates it.
-          The scatter below is a lightweight proxy using lat/lon from cluster data.
-        </div>
-      </div>
-      <div class="card">
-        <div class="ch">
-          <div><h3>Spatial Cluster Map (Bengaluru BTP)</h3><div class="sub">Each circle = one DBSCAN cluster · colour = risk tier</div></div>
-          <div class="frow" style="margin:0">
-            <label>Min score:</label>
-            <input type="number" id="hm-min" placeholder="e.g. 500" style="width:100px">
-            <button class="btn btn-p btn-sm" onclick="loadHeatmap()">Apply</button>
-          </div>
-        </div>
-        <div class="cb">
-          <canvas id="heatmap-canvas" width="900" height="460"
-            style="width:100%;height:auto;border-radius:8px;background:#eef4ff;cursor:crosshair"></canvas>
-          <div style="display:flex;gap:18px;margin-top:10px;flex-wrap:wrap;font-size:11.5px">
-            <span>🔴 Critical (&gt;8 000)</span>
-            <span>🟠 High (3 000–8 000)</span>
-            <span>🟡 Medium (1 000–3 000)</span>
-            <span>🟢 Low (&lt;1 000)</span>
-            <span style="color:var(--sl-400)">Bubble radius ∝ congestion score</span>
-          </div>
-          <div id="heatmap-tooltip" style="display:none;position:fixed;background:var(--sl-800);color:#fff;
-            font-size:11.5px;padding:6px 10px;border-radius:6px;pointer-events:none;z-index:99;max-width:220px"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="ch"><h3>Cluster Table</h3></div>
-        <div class="cb" id="cluster-tbl"><div class="ld"><div class="spinner"></div></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ JUNCTION IMPACT ═══ -->
-  <div class="page" id="page-junctions">
-    <div class="topbar">
-      <div><div style="font-size:16px;font-weight:800">Junction Impact</div>
-           <div class="topbar-sub">Congestion rank score · peak-hour fractions · violation mix</div></div>
-      <button class="btn btn-sm" onclick="loadJunctions()">↻ Reload</button>
-    </div>
-    <div class="content">
-      <div class="card">
-        <div class="ch">
-          <div><h3>Top Junctions by Congestion Score</h3><div class="sub">Normalised 0–100 (impact×0.55 + violations×0.45)</div></div>
-          <div class="frow" style="margin:0">
-            <label>Top:</label>
-            <select id="j-top"><option>10</option><option selected>20</option><option>50</option></select>
-            <label>Sort:</label>
-            <select id="j-sort">
-              <option value="congestion_rank_score">Congestion Score</option>
-              <option value="total_violations">Total Violations</option>
-              <option value="total_impact">Total Impact</option>
-            </select>
-            <button class="btn btn-p btn-sm" onclick="loadJunctions()">Apply</button>
-          </div>
-        </div>
-        <div class="cb">
-          <div id="j-chart" style="margin-bottom:18px"></div>
-          <div class="tw" id="j-tbl"><div class="ld"><div class="spinner"></div></div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ ENFORCEMENT PRIORITY ═══ -->
-  <div class="page" id="page-priority">
-    <div class="topbar">
-      <div><div style="font-size:16px;font-weight:800">Enforcement Priority</div>
-           <div class="topbar-sub">Next-day predicted violations × congestion × historical hotspot</div></div>
-      <button class="btn btn-sm" onclick="loadPriority()">↻ Reload</button>
-    </div>
-    <div class="content">
-      <div class="callout blue">
-        <span class="callout-ico">ℹ️</span>
-        <div class="callout-body">
-          Priority score = 50% predicted violations + 30% congestion rank + 20% historical hotspot.
-          Officer count: ≥85 → 3 officers · ≥65 → 2 · else 1.
-        </div>
-      </div>
-      <div class="card">
-        <div class="ch">
-          <h3>Patrol Priority Ranking</h3>
-          <div class="frow" style="margin:0">
-            <label>Risk:</label>
-            <select id="p-risk"><option value="">All</option><option>Critical</option><option>High</option><option>Moderate</option><option>Low</option></select>
-            <label>Limit:</label>
-            <select id="p-lim"><option>20</option><option selected>50</option><option>100</option></select>
-            <button class="btn btn-p btn-sm" onclick="loadPriority()">Apply</button>
-          </div>
-        </div>
-        <div class="cb" id="priority-cb"><div class="ld"><div class="spinner"></div></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ TEMPORAL ═══ -->
-  <div class="page" id="page-temporal">
-    <div class="topbar">
-      <div><div style="font-size:16px;font-weight:800">Temporal Analytics</div>
-           <div class="topbar-sub">Hourly · day-of-week · monthly trend from daily anomaly data</div></div>
-      <button class="btn btn-sm" onclick="loadTemporal()">↻ Reload</button>
-    </div>
-    <div class="content">
-      <div class="grid2">
-        <div class="card">
-          <div class="ch"><div><h3>Hourly Violation Heatmap</h3><div class="sub">Aggregated from daily anomaly records · congestion-weighted</div></div></div>
-          <div class="cb" id="hourly-cb"><div class="ld"><div class="spinner"></div></div></div>
-        </div>
-        <div class="card">
-          <div class="ch"><div><h3>Day-of-Week Distribution</h3><div class="sub">Average daily violation count per weekday</div></div></div>
-          <div class="cb" id="dow-cb"><div class="ld"><div class="spinner"></div></div></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="ch"><div><h3>Congestion Proxy Scoring Model</h3><div class="sub">Explicitly state this to judges</div></div></div>
-        <div class="cb">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
-            ${[['Parking in Main Road','×3 weight','🔴 Carriageway obstruction'],
-               ['Double Parking','×2 weight','🟠 Lane blockage'],
-               ['Parking on Footpath','×2 weight','🟡 Pedestrian conflict'],
-               ['Wrong / No Parking','×1 weight','🟢 Minor obstruction']
-              ].map(([t,w,d])=>`
-            <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;background:var(--sky-50)">
-              <div style="font-weight:800;font-size:13px;margin-bottom:3px">${t}</div>
-              <div style="font-size:19px;font-weight:900;color:var(--sky-800)">${w}</div>
-              <div style="font-size:11px;color:var(--sl-400);margin-top:3px">${d}</div>
-            </div>`).join('')}
-          </div>
-          <div style="margin-top:14px;padding:12px;background:var(--lav-50);border:1px solid var(--lav-200);border-radius:var(--radius-sm);font-size:12px;color:var(--lav-700)">
-            <strong>Formula:</strong> Hotspot Score = Σ(violation_weight) per junction per time window.
-            Peak multiplier: morning (07–09h) or evening (17–20h) × 1.4 · junction presence × 1.2
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ ANOMALIES ═══ -->
-  <div class="page" id="page-anomalies">
-    <div class="topbar">
-      <div><div style="font-size:16px;font-weight:800">Anomaly Feed</div>
-           <div class="topbar-sub">IsolationForest detections · most anomalous days first</div></div>
-      <button class="btn btn-sm" onclick="loadAnomalies()">↻ Reload</button>
-    </div>
-    <div class="content">
-      <div class="card">
-        <div class="ch">
-          <h3>Detected Anomalies</h3>
-          <div class="frow" style="margin:0">
-            <input type="text" id="anom-j" placeholder="Junction filter…" style="width:170px">
-            <label><input type="checkbox" id="anom-only" checked> Anomalies only</label>
-            <select id="anom-lim"><option>50</option><option selected>100</option><option>200</option></select>
-            <button class="btn btn-p btn-sm" onclick="loadAnomalies()">Apply</button>
-          </div>
-        </div>
-        <div class="cb" id="anom-cb"><div class="ld"><div class="spinner"></div></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ PATROL OPTIMIZER ═══ -->
-  <div class="page" id="page-patrol">
-    <div class="topbar">
-      <div><div style="font-size:16px;font-weight:800">Patrol Zone Optimizer</div>
-           <div class="topbar-sub">Input officer count → output optimal zone assignments from priority data</div></div>
-    </div>
-    <div class="content">
-      <div class="callout blue">
-        <span class="callout-ico">ℹ️</span>
-        <div class="callout-body">
-          This optimizer groups top-priority junctions into K patrol zones based on their congestion rank score.
-          It mirrors a K-Means style allocation: highest-score junctions are seeded as zone anchors,
-          remaining junctions fill zones in descending priority order.
-          <strong>For judges:</strong> "If K officers follow this plan, X% of total congestion-weighted violations are covered."
-        </div>
-      </div>
-      <div class="card">
-        <div class="ch"><h3>Configure Patrol Deployment</h3></div>
-        <div class="cb">
-          <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
-            <div>
-              <div style="font-size:11.5px;font-weight:700;color:var(--sl-600);margin-bottom:5px">Available Officers</div>
-              <input type="number" id="officer-count" value="6" min="1" max="20"
-                style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:800;color:var(--sky-800)">
-            </div>
-            <div>
-              <div style="font-size:11.5px;font-weight:700;color:var(--sl-600);margin-bottom:5px">Patrol Zones (K)</div>
-              <input type="number" id="zone-count" value="3" min="1" max="8"
-                style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:800;color:var(--sky-800)">
-            </div>
-            <div>
-              <div style="font-size:11.5px;font-weight:700;color:var(--sl-600);margin-bottom:5px">Junctions per zone</div>
-              <input type="number" id="jpz" value="5" min="1" max="20"
-                style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:800;color:var(--sky-800)">
-            </div>
-            <button class="btn btn-p" onclick="runPatrol()">▶ Generate Zone Plan</button>
-          </div>
-          <div id="patrol-out" style="margin-top:18px"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ MODEL REGISTRY ═══ -->
-  <div class="page" id="page-models">
-    <div class="topbar">
-      <div><div style="font-size:16px;font-weight:800">Model Registry</div>
-           <div class="topbar-sub">Loaded artefact info · file sizes · optimization notes</div></div>
-      <button class="btn btn-sm" onclick="loadModels()">↻ Reload</button>
-    </div>
-    <div class="content">
-      <div class="model-grid" id="model-grid"><div class="ld" style="grid-column:1/-1"><div class="spinner"></div></div></div>
-
-      <!-- Optimization notes section -->
-      <div class="card" style="margin-top:18px">
-        <div class="ch"><div><h3>📐 Model Rating & Optimization Roadmap</h3><div class="sub">Based on your pipeline + the Bengaluru BTP dataset characteristics</div></div></div>
-        <div class="cb">
-          <div style="display:flex;flex-direction:column;gap:14px">
-
-            <!-- DBSCAN -->
-            <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;background:var(--sky-50)">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <span style="font-size:20px">🗺️</span>
-                <div>
-                  <div style="font-weight:800;font-size:13.5px">DBSCAN Clusterer</div>
-                  <div style="font-size:11px;color:var(--sl-400)">eps=150m · min_samples=10 · haversine metric</div>
-                </div>
-                <div style="margin-left:auto;text-align:right">
-                  <div style="font-size:19px;font-weight:900;color:var(--sky-800)">7.5 / 10</div>
-                  <div style="font-size:10px;color:var(--sl-400)">Current rating</div>
-                </div>
-              </div>
-              <div style="font-size:12px;color:var(--sl-600);line-height:1.7">
-                <strong>✅ What works:</strong> Haversine distance is correct for GPS lat/lon · cluster on only validated+GPS-valid rows · `n_jobs=-1` parallelism. <br>
-                <strong>⚠️ Weaknesses:</strong> eps=150m is a fixed guess — Bengaluru arterials can be 500m apart; small eps creates too many noise points. min_samples=10 may miss low-density suburban hotspots. Only `has_junction==1` rows used — the 147 K "No Junction" records are a goldmine you're skipping.<br>
-                <strong>🚀 Optimizations:</strong>
-                (1) Auto-tune eps via k-distance elbow plot (k=min_samples). 
-                (2) Run a <em>second</em> DBSCAN on the "No Junction" records separately to surface uncoded hotspots — judges will love this. 
-                (3) Use HDBSCAN (pip install hdbscan) which handles variable-density clusters far better. 
-                (4) Add `congestion_weight` as a sample weight to bias clusters toward high-impact points.
-              </div>
-            </div>
-
-            <!-- XGBoost forecast -->
-            <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;background:var(--lav-50)">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <span style="font-size:20px">📈</span>
-                <div>
-                  <div style="font-weight:800;font-size:13.5px">Forecast Model (XGBoost / RandomForest)</div>
-                  <div style="font-size:11px;color:var(--sl-400)">Lag features + rolling stats · 80/20 temporal split</div>
-                </div>
-                <div style="margin-left:auto;text-align:right">
-                  <div style="font-size:19px;font-weight:900;color:var(--sky-800)">6.5 / 10</div>
-                  <div style="font-size:10px;color:var(--sl-400)">Current rating</div>
-                </div>
-              </div>
-              <div style="font-size:12px;color:var(--sl-600);line-height:1.7">
-                <strong>✅ What works:</strong> Lag-1/2/7 + rolling 3 & 7 means is solid. Impact score as feature adds domain knowledge. Temporal train/test split (not random) is correct — prevents data leakage. <br>
-                <strong>⚠️ Weaknesses:</strong> Simple 80/20 split doesn't test across junctions (a model trained on popular junctions may not generalise to low-frequency ones). No cross-validation — you have no uncertainty estimate on R². Jan has 4× more records than April; the model may learn Jan patterns and perform poorly on sparse months. Missing: holiday/event features, rainfall proxy, month-end effects.<br>
-                <strong>🚀 Optimizations:</strong>
-                (1) Use <code>TimeSeriesSplit(n_splits=5)</code> for proper OOF evaluation — you already import it but don't use it. 
-                (2) Add Optuna hyperparameter tuning (n_estimators 100-800, max_depth 3-8, lr 0.01-0.3). 
-                (3) Add LightGBM + CatBoost to an ensemble — average predictions or stack with Ridge. 
-                (4) Add <code>is_holiday</code> flag for Karnataka public holidays. 
-                (5) Try target encoding `junction_clean` with smoothing to handle 150 cardinalities. 
-                (6) Log-transform target (violation count often right-skewed) → train on log(count+1), predict, exponentiate back.
-              </div>
-            </div>
-
-            <!-- IsolationForest -->
-            <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;background:var(--sky-50)">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <span style="font-size:20px">⚠️</span>
-                <div>
-                  <div style="font-weight:800;font-size:13.5px">Anomaly Detector (IsolationForest)</div>
-                  <div style="font-size:11px;color:var(--sl-400)">contamination=5% · features: count, impact, main_road_frac, z_score</div>
-                </div>
-                <div style="margin-left:auto;text-align:right">
-                  <div style="font-size:19px;font-weight:900;color:var(--sky-800)">7 / 10</div>
-                  <div style="font-size:10px;color:var(--sl-400)">Current rating</div>
-                </div>
-              </div>
-              <div style="font-size:12px;color:var(--sl-600);line-height:1.7">
-                <strong>✅ What works:</strong> Z-score feature gives temporal context. Using `decision_function` score (not just flag) allows ranking anomalies. contamination=0.05 is reasonable for sparse event spikes.<br>
-                <strong>⚠️ Weaknesses:</strong> Global model across all junctions — a 5-violation day at a low-traffic junction is different from 5 at Safina Plaza. No per-junction normalisation before fitting. 4 features is thin; no day-of-week or month control.<br>
-                <strong>🚀 Optimizations:</strong>
-                (1) Fit per-junction IsolationForest (or at least per cluster-tier: Critical/High/Medium). 
-                (2) Add `dow` and `month` as features to avoid flagging Monday-surges as anomalies. 
-                (3) Try <code>LocalOutlierFactor</code> — better for density-based anomaly detection in sparse temporal data. 
-                (4) Set a rolling alert threshold: flag if daily_count &gt; roll7_mean + 2.5 × roll7_std — simpler and more explainable to judges.
-              </div>
-            </div>
-
-            <!-- Overall pipeline -->
-            <div style="border:2px solid var(--lav-400);border-radius:var(--radius-sm);padding:14px;background:var(--lav-50)">
-              <div style="font-weight:800;font-size:13.5px;color:var(--lav-700);margin-bottom:8px">🏆 Overall Pipeline Rating: 7 / 10</div>
-              <div style="font-size:12px;color:var(--sl-600);line-height:1.8">
-                <strong>What's genuinely good:</strong> End-to-end pipeline in one file, congestion proxy scoring is well-designed and defensible, feature engineering is thorough (peak flags, violation type dummies, junction factors), artefact persistence is production-ready.<br><br>
-                <strong>Critical gaps to fix before submission:</strong><br>
-                ① <strong>Empty dataset guard</strong> — no checks if CSV is empty or GPS rows = 0 after filtering; DBSCAN will crash. Add: <code>if gps.empty: return empty_df, empty_summary, None</code><br>
-                ② <strong>XGBoost fallback</strong> — if `forecast_df` after <code>dropna()</code> has &lt;50 rows (can happen with sparse junctions), model will overfit silently. Add a row-count guard.<br>
-                ③ <strong>No TimeSeriesSplit CV</strong> — import exists, not used. Run 5-fold TSS, log mean±std R² to metrics JSON.<br>
-                ④ <strong>Congestion weight = 1 for unmatched rows</strong> — sensible default, but unmatched violations get non-zero weight; consider 0 as default.<br>
-                ⑤ <strong>No junction encoding</strong> — `junction_clean` string isn't used as model feature (only aggregated stats); add smoothed target encoding for per-junction identity signal.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Artefacts -->
-      <div class="card">
-        <div class="ch"><h3>Artefact Files</h3></div>
-        <div class="cb" id="artefacts-cb"><div class="ld"><div class="spinner"></div></div></div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /main -->
-</div><!-- /shell -->
-
-<script>
-// ═══════════════════════════════════════
-//  Config & State
-// ═══════════════════════════════════════
-let API = 'http://localhost:5000';
-let _priorityCache = [];
-
-function setApi(v){ API = v.replace(/\/$/,''); checkHealth(); }
-
-async function apiFetch(path){
-  const r = await fetch(API+path);
-  if(!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
-}
-
-// ── Navigation ────────────────────────
-function nav(el){
-  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active');
-  const key = el.dataset.page;
-  document.getElementById('page-'+key).classList.add('active');
-  const map={overview:loadOverview,heatmap:loadHeatmap,junctions:loadJunctions,
-              priority:loadPriority,temporal:loadTemporal,anomalies:loadAnomalies,
-              models:loadModels};
-  if(map[key]) map[key]();
-}
-
-// ── Health ────────────────────────────
-async function checkHealth(){
-  const dot=document.getElementById('dot'),lbl=document.getElementById('api-lbl');
-  dot.className='dot chk'; lbl.textContent='Checking…';
-  try{ await apiFetch('/api/health'); dot.className='dot'; lbl.textContent='API Online'; }
-  catch{ dot.className='dot off'; lbl.textContent='API Offline'; }
-}
-
-// ── Helpers ───────────────────────────
-const $=id=>document.getElementById(id);
-const f=(v,d=1)=>v==null||isNaN(v)?'—':Number(v).toFixed(d);
-function ld(id){$(id).innerHTML='<div class="ld"><div class="spinner"></div>Loading…</div>'}
-function err(id,msg){$(id).innerHTML=`<div class="err-box">⚠️ ${msg}</div>`}
-function warn(msg){return`<div class="warn-box">⚠️ ${msg}</div>`}
-
-function riskBadge(lv){
-  const m={Critical:'b-cr',High:'b-hi',Moderate:'b-mo',Low:'b-lo'};
-  return`<span class="badge ${m[lv]||'b-sky'}">${lv||'—'}</span>`;
-}
-function scoreBar(v,max=100){
-  const pct=Math.min(100,Math.max(0,(v/max)*100));
-  return`<div class="sb-wrap"><div class="sb-track"><div class="sb-fill" style="width:${pct}%"></div></div><span class="sb-val">${f(v)}</span></div>`;
-}
-function hBar(label,val,max,suffix=''){
-  const pct=max>0?(val/max)*100:0;
-  return`<div class="hbar-row">
-    <div class="hbar-lbl" title="${label}">${label}</div>
-    <div class="hbar-track"><div class="hbar-fill" style="width:${pct}%"></div></div>
-    <div class="hbar-num">${Number(val).toFixed(0)}${suffix}</div>
-  </div>`;
-}
-
-function mkTable(rows, cols){
-  if(!rows.length) return warn('No data for current filter.');
-  const head=cols.map(c=>`<th>${c.l}</th>`).join('');
-  const body=rows.map(r=>{
-    const cells=cols.map(c=>`<td>${c.r?c.r(r[c.k],r):(r[c.k]??'—')}</td>`).join('');
-    return`<tr>${cells}</tr>`;
-  }).join('');
-  return`<div class="tw"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
-}
-
-// ═══════════════════════════════════════
-//  OVERVIEW
-// ═══════════════════════════════════════
-async function loadOverview(){
-  ld('kpi-grid'); ld('metrics-cb'); $('risk-gauges').innerHTML='<div class="ld"><div class="spinner"></div></div>';
-  try{
-    const [sum, rep] = await Promise.all([apiFetch('/api/summary'), apiFetch('/api/report')]);
-    const fm=sum.forecast_metrics||{};
-
-    // KPIs
-    const kpis=[
-      {l:'Total Junctions',   v:sum.total_junctions??'—',         s:'with GPS data',           i:'🛣️'},
-      {l:'Total Violations',  v:sum.total_violations?(+sum.total_violations).toLocaleString():'—', s:'all junctions', i:'🚫'},
-      {l:'DBSCAN Clusters',   v:sum.total_clusters??'—',          s:'spatial hotspots',         i:'📍'},
-      {l:'Anomaly Days',      v:sum.anomaly_days??'—',            s:'flagged by IForest',       i:'⚠️'},
-      {l:'Avg Congestion',    v:sum.avg_congestion_score!=null?f(sum.avg_congestion_score):'—', s:'rank score 0–100', i:'📈'},
-      {l:'Forecast R²',       v:fm.R2!=null?f(fm.R2,4):'—',      s:'held-out 20%',             i:'🤖'},
-    ];
-    $('kpi-grid').innerHTML=kpis.map(k=>`
-      <div class="kpi">
-        <div class="kpi-lbl">${k.l}</div>
-        <div class="kpi-val">${k.v}</div>
-        <div class="kpi-sub">${k.s}</div>
-        <div class="kpi-ico">${k.i}</div>
-      </div>`).join('');
-
-    // Metrics
-    $('metrics-cb').innerHTML=`
-      <div class="stat-strip">
-        <div class="ss-item"><div class="sv">${fm.R2!=null?f(fm.R2,4):'—'}</div><div class="sl">R²</div></div>
-        <div class="ss-item"><div class="sv">${fm.MAE!=null?f(fm.MAE,2):'—'}</div><div class="sl">MAE</div></div>
-        <div class="ss-item"><div class="sv">${fm.RMSE!=null?f(fm.RMSE,2):'—'}</div><div class="sl">RMSE</div></div>
-      </div>
-      ${sum.pipeline_rows?`<div style="font-size:11px;color:var(--sl-400);margin-top:10px">Dataset rows: ${(+sum.pipeline_rows).toLocaleString()} · Generated: ${sum.generated_at||'—'}</div>`:''}
-      <div class="callout amber" style="margin-top:12px">
-        <span class="callout-ico">💡</span>
-        <div class="callout-body">R² on a simple 80/20 split. Add <strong>TimeSeriesSplit(5)</strong> to get honest OOF estimates ± uncertainty bands.</div>
-      </div>`;
-
-    // Risk gauges
-    const rData=rep.data||[];
-    const rc={Critical:0,High:0,Moderate:0,Low:0};
-    rData.forEach(r=>{const k=r.risk_level;if(k in rc)rc[k]++});
-    const tot=rData.length||1;
-    const rcols={Critical:'#ef4444',High:'#f97316',Moderate:'#eab308',Low:'#22c55e'};
-    $('risk-gauges').innerHTML=Object.entries(rc).map(([k,v])=>{
-      const pct=Math.round((v/tot)*100);
-      return`<div class="gauge-item">
-        <div class="g-ring" style="background:conic-gradient(${rcols[k]} 0% ${pct}%,#dbeeff ${pct}% 100%)">
-          <div class="g-inner">${v}</div>
-        </div>
-        <div class="g-lbl">${k}</div>
-        <div class="g-sub">${pct}%</div>
-      </div>`;
-    }).join('');
-  }catch(e){err('kpi-grid',e.message)}
-}
-
-// ═══════════════════════════════════════
-//  HEATMAP (canvas scatter)
-// ═══════════════════════════════════════
-let _clusterData=[];
-async function loadHeatmap(){
-  ld('cluster-tbl');
-  try{
-    const minS=$('hm-min').value;
-    let url='/api/clusters?limit=200';
-    if(minS) url+=`&min_score=${minS}`;
-    const d=await apiFetch(url);
-    _clusterData=d.data||[];
-    drawHeatmapCanvas(_clusterData);
-    renderClusterTable(_clusterData);
-  }catch(e){err('cluster-tbl',e.message)}
-}
-
-function riskColor(score){
-  if(score>8000) return'#ef4444';
-  if(score>3000) return'#f97316';
-  if(score>1000) return'#eab308';
-  return'#22c55e';
-}
-
-function drawHeatmapCanvas(data){
-  const canvas=$('heatmap-canvas');
-  const ctx=canvas.getContext('2d');
-  const W=canvas.width, H=canvas.height;
-  ctx.clearRect(0,0,W,H);
-
-  // draw subtle grid
-  ctx.strokeStyle='rgba(96,175,245,0.12)'; ctx.lineWidth=1;
-  for(let i=0;i<=4;i++){
-    ctx.beginPath();ctx.moveTo(i*W/4,0);ctx.lineTo(i*W/4,H);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(0,i*H/4);ctx.lineTo(W,i*H/4);ctx.stroke();
-  }
-
-  const valid=data.filter(r=>r.avg_lat&&r.avg_lon);
-  if(!valid.length){
-    ctx.fillStyle='#94a3b8'; ctx.font='16px Inter,sans-serif';
-    ctx.textAlign='center'; ctx.fillText('No cluster data with GPS coordinates',W/2,H/2);
-    return;
-  }
-  const lats=valid.map(r=>r.avg_lat), lons=valid.map(r=>r.avg_lon);
-  const latMin=Math.min(...lats)-0.02, latMax=Math.max(...lats)+0.02;
-  const lonMin=Math.min(...lons)-0.02, lonMax=Math.max(...lons)+0.02;
-  const scores=valid.map(r=>r.congestion_score||0);
-  const maxScore=Math.max(...scores)||1;
-
-  function toXY(lat,lon){
-    return{
-      x:((lon-lonMin)/(lonMax-lonMin))*(W-80)+40,
-      y:H-((lat-latMin)/(latMax-latMin))*(H-80)-40
-    };
-  }
-
-  // draw halo
-  valid.forEach(r=>{
-    const {x,y}=toXY(r.avg_lat,r.avg_lon);
-    const score=r.congestion_score||0;
-    const radius=Math.max(8,Math.min(48,(score/maxScore)*48));
-    const col=riskColor(score);
-    const grd=ctx.createRadialGradient(x,y,0,x,y,radius*1.8);
-    grd.addColorStop(0,col.replace(')',',0.18)').replace('rgb','rgba'));
-    grd.addColorStop(1,'transparent');
-    ctx.beginPath(); ctx.arc(x,y,radius*1.8,0,Math.PI*2);
-    ctx.fillStyle=grd; ctx.fill();
-  });
-
-  // draw circles
-  valid.forEach(r=>{
-    const {x,y}=toXY(r.avg_lat,r.avg_lon);
-    const score=r.congestion_score||0;
-    const radius=Math.max(6,Math.min(40,(score/maxScore)*40));
-    const col=riskColor(score);
-    ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2);
-    ctx.fillStyle=col+'cc'; ctx.fill();
-    ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.stroke();
-    // label
-    if(radius>18){
-      ctx.fillStyle='#1e293b'; ctx.font='10px Inter,sans-serif'; ctx.textAlign='center';
-      const lbl=(r.top_junction||`C${r.cluster_id}`).substring(0,14);
-      ctx.fillText(lbl,x,y+radius+11);
-    }
-  });
-
-  // axis labels
-  ctx.fillStyle='#94a3b8'; ctx.font='9px Inter,sans-serif'; ctx.textAlign='left';
-  ctx.fillText(`${latMin.toFixed(2)}°N`,4,H-4);
-  ctx.fillText(`${latMax.toFixed(2)}°N`,4,12);
-  ctx.textAlign='center';
-  ctx.fillText(`${lonMin.toFixed(2)}°E`,44,H-2);
-  ctx.fillText(`${lonMax.toFixed(2)}°E`,W-44,H-2);
-
-  // hover tooltip
-  canvas.onmousemove=(e)=>{
-    const rect=canvas.getBoundingClientRect();
-    const scaleX=W/rect.width, scaleY=H/rect.height;
-    const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
-    const tip=$('heatmap-tooltip');
-    let found=null;
-    valid.forEach(r=>{
-      const {x,y}=toXY(r.avg_lat,r.avg_lon);
-      const radius=Math.max(6,Math.min(40,((r.congestion_score||0)/maxScore)*40));
-      if(Math.hypot(mx-x,my-y)<radius+6) found=r;
-    });
-    if(found){
-      tip.style.display='block';
-      tip.style.left=e.clientX+12+'px'; tip.style.top=e.clientY-10+'px';
-      tip.innerHTML=`<strong>${found.top_junction||'Cluster '+found.cluster_id}</strong><br>
-        Violations: ${found.violation_count??'—'}<br>
-        Congestion: ${found.congestion_score?.toFixed(0)??'—'}<br>
-        GPS: ${f(found.avg_lat,4)}°N, ${f(found.avg_lon,4)}°E`;
-    }else{
-      tip.style.display='none';
-    }
-  };
-  canvas.onmouseleave=()=>{ $('heatmap-tooltip').style.display='none'; };
-}
-
-function renderClusterTable(data){
-  let html='';
-  if(data.length===0) html=warn('No clusters match filter.');
-  else html=mkTable(data.slice(0,50),[
-    {l:'Cluster ID',k:'cluster_id'},
-    {l:'Violations',k:'violation_count',r:v=>`<strong>${v??'—'}</strong>`},
-    {l:'Congestion Score',k:'congestion_score',r:v=>scoreBar(v,50000)},
-    {l:'Top Junction',k:'top_junction'},
-    {l:'Risk',k:'congestion_score',r:v=>riskBadge(v>8000?'Critical':v>3000?'High':v>1000?'Moderate':'Low')},
-    {l:'Lat',k:'avg_lat',r:v=>f(v,4)},
-    {l:'Lon',k:'avg_lon',r:v=>f(v,4)},
-  ]);
-  $('cluster-tbl').innerHTML=html;
-}
-
-// ═══════════════════════════════════════
-//  JUNCTIONS
-// ═══════════════════════════════════════
-async function loadJunctions(){
-  $('j-chart').innerHTML='<div class="ld"><div class="spinner"></div></div>';
-  $('j-tbl').innerHTML='<div class="ld"><div class="spinner"></div></div>';
-  try{
-    const top=$('j-top').value, sort=$('j-sort').value;
-    const d=await apiFetch(`/api/junctions?top=${top}&sort_by=${sort}`);
-    const rows=d.data||[];
-    // horizontal bar chart
-    const maxScore=Math.max(...rows.map(r=>r.congestion_rank_score||0),1);
-    $('j-chart').innerHTML=rows.slice(0,15).map(r=>
-      hBar(r.junction_clean||'—', r.congestion_rank_score||0, maxScore)
-    ).join('');
-    // table
-    $('j-tbl').innerHTML=mkTable(rows,[
-      {l:'Junction',k:'junction_clean'},
-      {l:'Violations',k:'total_violations',r:v=>`<strong>${(v||0).toLocaleString()}</strong>`},
-      {l:'Congestion Score',k:'congestion_rank_score',r:v=>scoreBar(v)},
-      {l:'Impact',k:'total_impact',r:v=>f(v,0)},
-      {l:'Morning %',k:'morning_peak_share',r:v=>v!=null?`${(v*100).toFixed(1)}%`:'—'},
-      {l:'Evening %',k:'evening_peak_share',r:v=>v!=null?`${(v*100).toFixed(1)}%`:'—'},
-      {l:'Main Rd %',k:'main_road_share',r:v=>v!=null?`${(v*100).toFixed(1)}%`:'—'},
-    ]);
-  }catch(e){err('j-tbl',e.message); $('j-chart').innerHTML='';}
-}
-
-// ═══════════════════════════════════════
-//  PRIORITY
-// ═══════════════════════════════════════
-async function loadPriority(){
-  ld('priority-cb');
-  try{
-    const risk=$('p-risk').value, lim=$('p-lim').value;
-    let url=`/api/priority?limit=${lim}`;
-    if(risk) url+=`&risk=${encodeURIComponent(risk)}`;
-    const d=await apiFetch(url);
-    _priorityCache=d.data||[];
-    $('priority-cb').innerHTML=mkTable(_priorityCache,[
-      {l:'#',k:'priority_rank'},
-      {l:'Junction',k:'junction_clean'},
-      {l:'Priority Score',k:'priority_score',r:v=>scoreBar(v)},
-      {l:'Risk',k:'risk_level',r:v=>riskBadge(v)},
-      {l:'Pred. Violations',k:'predicted_next_day_violations',r:v=>f(v,1)},
-      {l:'Cong. Score',k:'congestion_rank_score',r:v=>f(v,1)},
-      {l:'Officers',k:'recommended_officers',r:v=>v!=null?`${'👮'.repeat(Math.min(v,3))} ${v}`:'—'},
-    ]);
-  }catch(e){err('priority-cb',e.message)}
-}
-
-// ═══════════════════════════════════════
-//  TEMPORAL (simulated hourly/dow from summary)
-// ═══════════════════════════════════════
-async function loadTemporal(){
-  ld('hourly-cb'); ld('dow-cb');
-  // We don't have an hourly breakdown endpoint — simulate from known domain facts
-  // (from the PDF: 04-06h patrol peak, 19-23h secondary)
-  // Ideally you'd add /api/hourly to the backend reading daily_anomaly date field
-  const hourlyWeights=[2,3,4,8,9,8,5,4,3,2,2,2,3,3,3,3,4,5,7,8,7,6,4,3];
-  const maxW=Math.max(...hourlyWeights);
-  function heatColor(w,max){
-    const t=w/max;
-    const r=Math.round(96+(167-96)*t), g=Math.round(175+(115-175)*t), b=Math.round(245+(245-245)*t);
-    return`rgba(${r},${g},${b},${0.3+t*0.7})`;
-  }
-  const hourCells=hourlyWeights.map((w,h)=>{
-    const c=heatColor(w,maxW);
-    return`<div class="h-cell" style="background:${c}" data-tip="${String(h).padStart(2,'0')}:00 — ${w}K weighted violations"></div>`;
-  }).join('');
-  const hourTicks=hourlyWeights.map((_,h)=>`<div class="h-tick">${String(h).padStart(2,'0')}</div>`).join('');
-  $('hourly-cb').innerHTML=`
-    <div style="font-size:11px;color:var(--sl-400);margin-bottom:8px">Colour intensity = congestion-weighted violation count</div>
-    <div class="hourly-grid">${hourCells}</div>
-    <div class="h-axis">${hourTicks}</div>
-    <div style="margin-top:10px;font-size:11.5px;color:var(--sl-600)">
-      🔴 <strong>04:00–06:00 peak</strong> reflects patrol shift windows (enforcement activity, not true violations).
-      <br>🟠 <strong>19:00–23:00 secondary peak</strong> = commercial area spillover. State this to judges.
-    </div>`;
-
-  const dowLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const dowVals=[100,98,104,102,110,88,75];
-  const maxD=Math.max(...dowVals);
-  $('dow-cb').innerHTML=`
-    <div style="font-size:11px;color:var(--sl-400);margin-bottom:10px">Average daily violation index (Mon=100 baseline)</div>
-    ${dowLabels.map((d,i)=>hBar(d,dowVals[i],maxD,'%')).join('')}
-    <div style="margin-top:10px;font-size:11.5px;color:var(--sl-600)">Weekends show ~20% lower activity — fewer commercial vehicles; enforcement shifts lighter.</div>`;
-}
-
-// ═══════════════════════════════════════
-//  ANOMALIES
-// ═══════════════════════════════════════
-async function loadAnomalies(){
-  ld('anom-cb');
-  try{
-    const onlyA=$('anom-only').checked, lim=$('anom-lim').value, j=$('anom-j').value;
-    let url=`/api/anomalies?only_anomalies=${onlyA}&limit=${lim}`;
-    if(j) url+=`&junction=${encodeURIComponent(j)}`;
-    const d=await apiFetch(url);
-    const rows=d.data||[];
-    if(!rows.length){$('anom-cb').innerHTML=warn('No anomalies for current filter.');return;}
-    const items=rows.map(r=>{
-      const isA=r.anomaly_flag===-1;
-      return`<div class="anom-item">
-        <div class="anom-ico">${isA?'🔴':'🟢'}</div>
-        <div style="flex:1;min-width:0">
-          <div class="anom-title">${r.junction_clean||'—'}</div>
-          <div class="anom-meta">
-            Date: <strong>${r.date||'—'}</strong> ·
-            Count: <strong>${r.daily_count??'—'}</strong> ·
-            Z-score: <strong>${f(r.z_score,2)}</strong> ·
-            Impact: <strong>${f(r.daily_impact,0)}</strong>
-          </div>
-        </div>
-        <span class="anom-score">score: ${f(r.anomaly_score,4)}</span>
-        <span class="badge ${isA?'b-cr':'b-ok'}" style="flex-shrink:0">${isA?'Anomaly':'Normal'}</span>
-      </div>`;
-    }).join('');
-    $('anom-cb').innerHTML=`<div class="anom-feed">${items}</div>`;
-  }catch(e){err('anom-cb',e.message)}
-}
-
-// ═══════════════════════════════════════
-//  PATROL OPTIMIZER
-// ═══════════════════════════════════════
-async function runPatrol(){
-  const officers=+$('officer-count').value||6;
-  const zones=+$('zone-count').value||3;
-  const jpz=+$('jpz').value||5;
-  $('patrol-out').innerHTML='<div class="ld"><div class="spinner"></div>Calculating zones…</div>';
-
-  // Load priority data if not cached
-  if(!_priorityCache.length){
-    try{ const d=await apiFetch('/api/priority?limit=100'); _priorityCache=d.data||[]; }
-    catch{ err('patrol-out','Failed to load priority data'); return; }
-  }
-
-  const sorted=[..._priorityCache].sort((a,b)=>(b.priority_score||0)-(a.priority_score||0));
-  if(!sorted.length){err('patrol-out','No priority data available');return;}
-
-  // Build zones greedily
-  const zoneData=Array.from({length:zones},(_,i)=>({
-    id:i+1,
-    junctions:[],
-    officers:Math.floor(officers/zones)+(i<officers%zones?1:0),
-    totalScore:0,
-  }));
-
-  sorted.slice(0,zones*jpz).forEach((row,idx)=>{
-    const z=zoneData[idx%zones];
-    z.junctions.push(row);
-    z.totalScore+=(row.priority_score||0);
-  });
-
-  const totalCoveredScore=zoneData.reduce((s,z)=>s+z.totalScore,0);
-  const overallMax=sorted.reduce((s,r)=>s+(r.priority_score||0),0);
-  const coveragePct=overallMax>0?((totalCoveredScore/overallMax)*100).toFixed(1):0;
-
-  const zoneIcons=['🔴','🟠','🟡','🟢','🔵','🟣','⚪','🟤'];
-  const zCards=zoneData.map((z,i)=>`
-    <div class="patrol-zone">
-      <div class="pz-head">
-        <span class="pz-ico">${zoneIcons[i]||'📍'}</span>
-        <div>
-          <div class="pz-zone">Zone ${z.id}</div>
-          <div class="pz-officers">${z.officers} officer${z.officers!==1?'s':''} assigned</div>
-        </div>
-      </div>
-      <div class="pz-junctions"><strong>Junctions:</strong><br>${z.junctions.map(j=>
-        `• ${j.junction_clean||'—'} ${riskBadge(j.risk_level)}`
-      ).join('<br>')}</div>
-      <div class="pz-score">Zone priority sum: ${z.totalScore.toFixed(1)}</div>
-    </div>`).join('');
-
-  $('patrol-out').innerHTML=`
-    <div class="info-box">
-      ✅ <strong>${officers} officers</strong> allocated across <strong>${zones} patrol zones</strong> covering
-      <strong>${zoneData.reduce((s,z)=>s+z.junctions.length,0)} junctions</strong>.
-      Estimated coverage: <strong>${coveragePct}%</strong> of total congestion-weighted violation score.
-      <em>(Compare to ~${(100/Math.max(sorted.length,1)*zones*jpz).toFixed(1)}% random baseline.)</em>
-    </div>
-    <div class="patrol-result">${zCards}</div>`;
-}
-
-// ═══════════════════════════════════════
-//  MODELS
-// ═══════════════════════════════════════
-async function loadModels(){
-  ld('model-grid'); ld('artefacts-cb');
-  try{
-    const [models,artefacts]=await Promise.all([apiFetch('/api/model-info'),apiFetch('/api/artefacts')]);
-    const micons={forecast:'📈',dbscan:'🗺️',anomaly:'⚠️'};
-    const mnames={forecast:'Forecast Model',dbscan:'DBSCAN Clusterer',anomaly:'Anomaly Detector'};
-    const mratings={forecast:'6.5/10',dbscan:'7.5/10',anomaly:'7/10'};
-    $('model-grid').innerHTML=Object.entries(models).map(([k,v])=>`
-      <div class="mc">
-        <div class="mc-ico">${micons[k]||'🤖'}</div>
-        <div class="mc-name">${mnames[k]||k}</div>
-        <span class="badge ${v.loaded?'b-ok':'b-err'}" style="margin-bottom:8px">${v.loaded?'✓ Loaded':'✗ Not loaded'}</span>
-        ${v.loaded?`
-          <div class="mc-type">${v.type}</div>
-          <div class="mc-meta">${v.size_kb} KB · ${v.module}</div>
-          <div style="margin-top:6px;font-size:11.5px;color:var(--lav-600);font-weight:700">Rating: ${mratings[k]||'—'}</div>
-        `:`<div class="mc-type" style="color:#ef4444;font-size:11.5px">${v.reason}</div>`}
-      </div>`).join('');
-
-    const aRows=Object.entries(artefacts).map(([k,v])=>`
-      <tr>
-        <td><code style="background:var(--sky-50);padding:2px 6px;border-radius:4px;font-size:11.5px">${k}</code></td>
-        <td>${v.file}</td>
-        <td><span class="badge ${v.exists?'b-ok':'b-err'}">${v.exists?'✓ Present':'✗ Missing'}</span></td>
-        <td>${v.size_kb!=null?v.size_kb+' KB':'—'}</td>
-      </tr>`).join('');
-    $('artefacts-cb').innerHTML=`
-      <div class="tw"><table>
-        <thead><tr><th>Key</th><th>Filename</th><th>Status</th><th>Size</th></tr></thead>
-        <tbody>${aRows}</tbody>
-      </table></div>`;
-  }catch(e){err('model-grid',e.message)}
-}
-
-// ═══════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════
-function refreshAll(){ checkHealth(); loadOverview(); }
-
-window.addEventListener('DOMContentLoaded',()=>{
-  checkHealth();
-  loadOverview();
-});
-</script>
-</body>
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+<meta charset="UTF-8" />  
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />  
+<title>Parking Intelligence — Bengaluru Heatmap</title>  
+<style>  
+  :root{  
+    --bg:#f4faff;  
+    --bg2:#eef6ff;  
+    --surface:#ffffff;  
+    --surface2:#f8fbff;  
+    --border:#d8e7f7;  
+    --border2:#b9d7f2;  
+    --text:#0b1b2b;  
+    --muted:#5f7288;  
+    --muted2:#7f93a8;  
+    --accent:#2f7dff;  
+    --accent2:#66b8ff;  
+    --accentSoft:#e7f3ff;  
+    --deep:#0d2340;  
+    --deep2:#102b4a;  
+    --deep3:#15335a;  
+    --shadow:0 14px 40px rgba(47,125,255,.10);  
+    --shadow2:0 12px 26px rgba(13,35,64,.10);  
+    --critical:#ef4444;  
+    --high:#f97316;  
+    --medium:#eab308;  
+    --low:#22c55e;  
+    --radius:18px;  
+    --radius-sm:12px;  
+    --radius-xs:8px;  
+    --sidebar:260px;  
+  }  
+  
+  body[data-theme="dark"]{  
+    --bg:#06111f;  
+    --bg2:#0b1728;  
+    --surface:#0f2138;  
+    --surface2:#10263d;  
+    --border:#20374f;  
+    --border2:#2c4d6d;  
+    --text:#eaf2ff;  
+    --muted:#8ea6be;  
+    --muted2:#a9bfd5;  
+    --accent:#66b8ff;  
+    --accent2:#9ad9ff;  
+    --accentSoft:#102b48;  
+    --deep:#0b1728;  
+    --deep2:#0d2340;  
+    --deep3:#102b4a;  
+    --shadow:0 18px 46px rgba(0,0,0,.34);  
+    --shadow2:0 18px 36px rgba(0,0,0,.28);  
+  }  
+  
+  *{box-sizing:border-box}  
+  html,body{margin:0;padding:0;min-height:100%}  
+  body{  
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;  
+    background:  
+      radial-gradient(circle at top left, rgba(102,184,255,.10), transparent 25%),  
+      radial-gradient(circle at bottom right, rgba(167,139,250,.08), transparent 20%),  
+      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);  
+    color:var(--text);  
+    overflow-x:hidden;  
+  }  
+  
+  a{color:inherit}  
+  button,input,select{font:inherit}  
+  code{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}  
+  
+  .shell{display:flex;min-height:100vh}  
+  .sidebar{  
+    width:var(--sidebar);  
+    flex:0 0 var(--sidebar);  
+    position:sticky;  
+    top:0;  
+    height:100vh;  
+    background:linear-gradient(180deg, var(--deep) 0%, var(--deep2) 55%, var(--deep3) 100%);  
+    color:#fff;  
+    border-right:1px solid rgba(255,255,255,.08);  
+    display:flex;  
+    flex-direction:column;  
+    padding:20px 0 14px;  
+    z-index:10;  
+  }  
+  
+  .brand{  
+    padding:0 20px 18px;  
+    border-bottom:1px solid rgba(255,255,255,.10);  
+  }  
+  .brand-badge{  
+    width:44px;height:44px;border-radius:14px;  
+    display:flex;align-items:center;justify-content:center;  
+    background:rgba(255,255,255,.14);  
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);  
+    font-size:22px;  
+    margin-bottom:10px;  
+  }  
+  .brand h1{margin:0;font-size:16px;line-height:1.25;font-weight:900}  
+  .brand p{margin:4px 0 0;font-size:12px;color:rgba(255,255,255,.64)}  
+  
+  .nav{padding:14px 0;display:flex;flex-direction:column;gap:6px;flex:1}  
+  .nav-item{  
+    display:flex;align-items:center;gap:10px;  
+    padding:11px 18px 11px 18px;  
+    cursor:pointer;  
+    color:rgba(255,255,255,.74);  
+    border-left:3px solid transparent;  
+    user-select:none;  
+    transition:.15s ease;  
+    font-size:13px;  
+    font-weight:600;  
+  }  
+  .nav-item:hover{background:rgba(255,255,255,.07);color:#fff}  
+  .nav-item.active{  
+    background:rgba(255,255,255,.12);  
+    color:#fff;  
+    border-left-color:var(--accent2);  
+  }  
+  .nav-icon{width:18px;text-align:center;font-size:16px;flex:0 0 18px}  
+  
+  .sidebar-foot{  
+    padding:14px 20px 8px;  
+    border-top:1px solid rgba(255,255,255,.10);  
+    font-size:11px;  
+    color:rgba(255,255,255,.62);  
+  }  
+  .status{  
+    display:flex;align-items:center;gap:7px;  
+    margin-top:7px;font-size:12px;  
+  }  
+  .dot{  
+    width:9px;height:9px;border-radius:50%;  
+    background:#f59e0b;  
+    box-shadow:0 0 0 4px rgba(245,158,11,.12);  
+  }  
+  .dot.ok{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.12)}  
+  .dot.off{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.12)}  
+  
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}  
+  .topbar{  
+    display:flex;  
+    align-items:center;  
+    justify-content:space-between;  
+    gap:12px;  
+    padding:14px 22px;  
+    background:rgba(255,255,255,.72);  
+    backdrop-filter: blur(10px);  
+    border-bottom:1px solid var(--border);  
+    position:sticky;  
+    top:0;  
+    z-index:9;  
+  }  
+  body[data-theme="dark"] .topbar{background:rgba(15,33,56,.78)}  
+  .topbar-left{display:flex;flex-direction:column;gap:3px}  
+  .topbar-title{font-size:16px;font-weight:900;letter-spacing:-.01em}  
+  .topbar-sub{font-size:12px;color:var(--muted)}  
+  
+  .top-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}  
+  .field{  
+    display:flex;align-items:center;gap:8px;  
+    background:var(--surface);  
+    border:1px solid var(--border);  
+    border-radius:999px;  
+    padding:8px 12px;  
+    box-shadow:var(--shadow2);  
+  }  
+  .field label{font-size:11px;color:var(--muted);font-weight:700}  
+  .field input, .field select{  
+    border:none;outline:none;background:transparent;color:var(--text);  
+    min-width: 150px;  
+  }  
+  .field input{min-width:220px}  
+  .btn{  
+    border:1px solid var(--border);  
+    background:var(--surface);  
+    color:var(--text);  
+    border-radius:999px;  
+    padding:9px 14px;  
+    cursor:pointer;  
+    transition:.15s ease;  
+    font-weight:700;  
+    box-shadow:var(--shadow2);  
+  }  
+  .btn:hover{transform:translateY(-1px);border-color:var(--border2)}  
+  .btn.primary{  
+    background:linear-gradient(135deg, var(--accent) 0%, #8ac7ff 100%);  
+    border-color:transparent;  
+    color:#fff;  
+  }  
+  .btn.small{padding:7px 12px;font-size:12px}  
+  
+  .content{padding:20px 22px 30px}  
+  .page{display:none}  
+  .page.active{display:block}  
+  
+  .hero{  
+    display:grid;  
+    grid-template-columns:1.3fr .7fr;  
+    gap:16px;  
+    align-items:stretch;  
+    margin-bottom:16px;  
+  }  
+  @media (max-width: 1200px){  
+    .hero{grid-template-columns:1fr}  
+  }  
+  
+  .card{  
+    background:var(--surface);  
+    border:1px solid var(--border);  
+    border-radius:var(--radius);  
+    box-shadow:var(--shadow);  
+    overflow:hidden;  
+  }  
+  .card-head{  
+    padding:14px 16px 12px;  
+    border-bottom:1px solid var(--border);  
+    display:flex;  
+    justify-content:space-between;  
+    align-items:flex-start;  
+    gap:12px;  
+  }  
+  .card-title{font-size:14px;font-weight:900}  
+  .card-sub{font-size:11.5px;color:var(--muted);margin-top:4px}  
+  .card-body{padding:16px}  
+  
+  .hero-copy{  
+    background:  
+      radial-gradient(circle at right top, rgba(102,184,255,.10), transparent 32%),  
+      linear-gradient(135deg, rgba(231,243,255,.95), rgba(216,236,255,.72));  
+    border:1px solid rgba(102,184,255,.20);  
+    border-radius:var(--radius);  
+    padding:18px;  
+    box-shadow:var(--shadow);  
+    min-height:190px;  
+    display:flex;  
+    flex-direction:column;  
+    justify-content:space-between;  
+    gap:18px;  
+  }  
+  body[data-theme="dark"] .hero-copy{  
+    background:  
+      radial-gradient(circle at right top, rgba(102,184,255,.12), transparent 32%),  
+      linear-gradient(135deg, rgba(16,43,72,.98), rgba(13,35,64,.95));  
+    border-color:rgba(154,217,255,.16);  
+  }  
+  .eyebrow{  
+    display:inline-flex;  
+    align-items:center;  
+    gap:7px;  
+    font-size:11px;  
+    letter-spacing:.12em;  
+    text-transform:uppercase;  
+    color:var(--muted);  
+    font-weight:800;  
+  }  
+  .hero h2{  
+    margin:8px 0 8px;  
+    font-size:28px;  
+    line-height:1.08;  
+    letter-spacing:-.03em;  
+  }  
+  .hero p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.65;max-width:62ch}  
+  .hero-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}  
+  .chip{  
+    border:1px solid var(--border);  
+    background:var(--surface);  
+    color:var(--text);  
+    border-radius:999px;  
+    padding:8px 12px;  
+    font-size:12px;  
+    font-weight:800;  
+    cursor:pointer;  
+    transition:.14s ease;  
+  }  
+  .chip:hover{border-color:var(--border2)}  
+  .chip.active{  
+    background:var(--accentSoft);  
+    color:var(--accent);  
+    border-color:rgba(47,125,255,.25);  
+  }  
+  body[data-theme="dark"] .chip.active{color:var(--accent2)}  
+  
+  .kpi-grid{  
+    display:grid;  
+    grid-template-columns:repeat(6, minmax(0, 1fr));  
+    gap:12px;  
+    margin:0 0 16px;  
+  }  
+  @media (max-width: 1200px){ .kpi-grid{grid-template-columns:repeat(3, minmax(0,1fr))} }  
+  @media (max-width: 700px){ .kpi-grid{grid-template-columns:repeat(2, minmax(0,1fr))} }  
+  
+  .kpi{  
+    background:var(--surface);  
+    border:1px solid var(--border);  
+    border-radius:16px;  
+    padding:14px 14px 13px;  
+    position:relative;  
+    overflow:hidden;  
+    box-shadow:var(--shadow2);  
+  }  
+  .kpi::before{  
+    content:"";  
+    position:absolute;inset:0 auto 0 0;  
+    width:4px;background:linear-gradient(180deg,var(--accent2),var(--accent));  
+  }  
+  .kpi-label{  
+    font-size:10px;  
+    text-transform:uppercase;  
+    letter-spacing:.12em;  
+    color:var(--muted);  
+    font-weight:900;  
+  }  
+  .kpi-value{  
+    font-size:26px;  
+    font-weight:950;  
+    letter-spacing:-.03em;  
+    margin-top:5px;  
+    color:var(--text);  
+  }  
+  .kpi-sub{font-size:11px;color:var(--muted);margin-top:3px}  
+  
+  .grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}  
+  @media (max-width: 1100px){ .grid2{grid-template-columns:1fr} }  
+  
+  .stack{display:flex;flex-direction:column;gap:16px}  
+  .map-wrap{  
+    position:relative;  
+    min-height:540px;  
+    background:  
+      linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,0)),  
+      linear-gradient(135deg, #eaf6ff, #d8ecff);  
+  }  
+  body[data-theme="dark"] .map-wrap{  
+    background:  
+      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)),  
+      linear-gradient(135deg, #0d2340, #102b4a);  
+  }  
+  .map-toolbar{  
+    display:flex;  
+    flex-wrap:wrap;  
+    gap:8px;  
+    align-items:center;  
+    justify-content:space-between;  
+  }  
+  .map-toolbar-left,.map-toolbar-right{display:flex;flex-wrap:wrap;gap:8px;align-items:center}  
+  .map-stage{  
+    position:relative;  
+    padding:14px 14px 8px;  
+  }  
+  .map-canvas{  
+    width:100%;  
+    height:100%;  
+    display:block;  
+    border-radius:16px;  
+    background:rgba(255,255,255,.25);  
+    cursor:crosshair;  
+    touch-action:none;  
+  }  
+  .tooltip{  
+    position:fixed;  
+    z-index:99;  
+    display:none;  
+    pointer-events:none;  
+    max-width:260px;  
+    background:rgba(11,27,43,.95);  
+    color:#fff;  
+    border:1px solid rgba(255,255,255,.10);  
+    border-radius:12px;  
+    padding:9px 11px;  
+    box-shadow:0 14px 28px rgba(0,0,0,.22);  
+    font-size:12px;  
+    line-height:1.5;  
+  }  
+  .tooltip strong{display:block;font-size:13px;margin-bottom:3px}  
+  
+  .legend{  
+    display:flex;flex-wrap:wrap;gap:10px;  
+    align-items:center;  
+    padding:10px 14px 14px;  
+    border-top:1px solid var(--border);  
+    color:var(--muted);  
+    font-size:11.5px;  
+  }  
+  .legend-item{display:flex;align-items:center;gap:6px}  
+  .legend-dot{  
+    width:10px;height:10px;border-radius:50%;  
+    box-shadow:0 0 0 4px rgba(255,255,255,.10);  
+  }  
+  .legend-dot.c{background:var(--critical)}  
+  .legend-dot.h{background:var(--high)}  
+  .legend-dot.m{background:var(--medium)}  
+  .legend-dot.l{background:var(--low)}  
+  .legend-dot.a{background:var(--accent)}  
+  
+  .filters{  
+    display:flex;  
+    flex-wrap:wrap;  
+    gap:8px;  
+    margin-top:10px;  
+  }  
+  .select, .input, .range{  
+    border:1px solid var(--border);  
+    background:var(--surface);  
+    color:var(--text);  
+    border-radius:999px;  
+    padding:8px 12px;  
+    outline:none;  
+  }  
+  .input{min-width:180px}  
+  .range{padding:8px 12px}  
+  .range input{width:170px}  
+  
+  .mini-kpis{  
+    display:grid;  
+    grid-template-columns:repeat(2, minmax(0,1fr));  
+    gap:10px;  
+  }  
+  .mini{  
+    background:var(--surface2);  
+    border:1px solid var(--border);  
+    border-radius:14px;  
+    padding:12px;  
+  }  
+  .mini .l{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:900}  
+  .mini .v{font-size:22px;font-weight:950;margin-top:3px}  
+  .mini .s{font-size:11px;color:var(--muted);margin-top:3px}  
+  
+  .section-list{display:flex;flex-direction:column;gap:10px}  
+  .row{  
+    display:flex;  
+    align-items:center;  
+    gap:10px;  
+    border:1px solid var(--border);  
+    background:var(--surface);  
+    border-radius:14px;  
+    padding:10px 12px;  
+    cursor:pointer;  
+    transition:.14s ease;  
+  }  
+  .row:hover{transform:translateY(-1px);border-color:var(--border2)}  
+  .row.active{outline:2px solid rgba(47,125,255,.25);background:var(--accentSoft)}  
+  .rank{  
+    width:30px;height:30px;border-radius:50%;  
+    display:flex;align-items:center;justify-content:center;  
+    background:var(--accentSoft);  
+    color:var(--accent);  
+    font-weight:900;  
+    flex:0 0 30px;  
+  }  
+  .row-main{flex:1;min-width:0}  
+  .row-title{font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}  
+  .row-meta{font-size:11px;color:var(--muted);margin-top:3px}  
+  .row-score{text-align:right;flex:0 0 auto}  
+  .score{font-size:13px;font-weight:950}  
+  .scorebar{  
+    height:5px;border-radius:999px;background:rgba(47,125,255,.12);  
+    overflow:hidden;margin-top:7px;min-width:120px;  
+  }  
+  .scorebar > div{  
+    height:100%;  
+    border-radius:999px;  
+    background:linear-gradient(90deg,var(--accent),var(--accent2));  
+  }  
+  
+  .badge{  
+    display:inline-flex;  
+    align-items:center;  
+    gap:6px;  
+    border-radius:999px;  
+    font-size:10.5px;  
+    font-weight:900;  
+    padding:4px 9px;  
+    white-space:nowrap;  
+  }  
+  .b-critical{background:#fee2e2;color:#b91c1c}  
+  .b-high{background:#fff7ed;color:#c2410c}  
+  .b-medium{background:#fefce8;color:#a16207}  
+  .b-low{background:#f0fdf4;color:#15803d}  
+  .b-sky{background:var(--accentSoft);color:var(--accent)}  
+  
+  .table{  
+    width:100%;  
+    border-collapse:collapse;  
+    font-size:12.5px;  
+  }  
+  .table th{  
+    text-align:left;  
+    padding:10px 11px;  
+    font-size:11px;  
+    text-transform:uppercase;  
+    letter-spacing:.08em;  
+    color:var(--muted);  
+    background:var(--surface2);  
+    border-bottom:1px solid var(--border);  
+  }  
+  .table td{  
+    padding:10px 11px;  
+    border-bottom:1px solid var(--border);  
+    color:var(--text);  
+  }  
+  .table tr:hover td{background:rgba(47,125,255,.04)}  
+  .table-wrap{overflow:auto;border-radius:14px;border:1px solid var(--border)}  
+  .muted{color:var(--muted)}  
+  
+  .feed{  
+    display:flex;flex-direction:column;gap:10px;  
+  }  
+  .feed-item{  
+    display:flex;gap:10px;align-items:flex-start;  
+    padding:12px 13px;border:1px solid var(--border);border-radius:14px;  
+    background:var(--surface);  
+  }  
+  .feed-ico{font-size:18px;flex:0 0 18px}  
+  .feed-title{font-size:13px;font-weight:900}  
+  .feed-meta{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.55}  
+  .feed-score{margin-left:auto;font-size:11px;font-weight:900;color:var(--accent)}  
+  .empty{  
+    text-align:center;  
+    color:var(--muted);  
+    padding:24px 16px;  
+    border:1px dashed var(--border2);  
+    border-radius:14px;  
+    background:var(--surface2);  
+  }  
+  
+  .temporal-grid{  
+    display:grid;  
+    grid-template-columns:repeat(24,1fr);  
+    gap:3px;  
+  }  
+  .hour-cell{  
+    height:28px;border-radius:4px;position:relative;  
+    cursor:default;  
+  }  
+  .hour-cell:hover::after{  
+    content:attr(data-tip);  
+    position:absolute;bottom:calc(100% + 6px);left:50%;  
+    transform:translateX(-50%);  
+    white-space:nowrap;  
+    background:#0b1b2b;color:#fff;font-size:10.5px;  
+    padding:4px 7px;border-radius:6px;z-index:10;  
+  }  
+  .hour-axis{  
+    display:grid;grid-template-columns:repeat(24,1fr);gap:3px;  
+    margin-top:6px;  
+  }  
+  .hour-axis div{font-size:9px;color:var(--muted);text-align:center}  
+  
+  .ring-grid{  
+    display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;  
+  }  
+  .ring{  
+    width:86px;height:86px;border-radius:50%;  
+    display:flex;align-items:center;justify-content:center;  
+    margin:0 auto 6px;  
+    background:conic-gradient(var(--accent) 0% 25%, rgba(47,125,255,.12) 25% 100%);  
+    position:relative;  
+  }  
+  .ring::after{  
+    content:"";  
+    position:absolute;inset:13px;  
+    border-radius:50%;  
+    background:var(--surface);  
+  }  
+  .ring-val{  
+    position:relative;z-index:1;  
+    font-weight:950;font-size:15px;  
+  }  
+  .ring-lbl{text-align:center;font-size:11px;font-weight:900;color:var(--muted)}  
+  .ring-sub{text-align:center;font-size:11px;color:var(--muted2);margin-top:2px}  
+  
+  .skeleton{  
+    padding:30px 10px;  
+    text-align:center;  
+    color:var(--muted);  
+  }  
+  .spinner{  
+    width:24px;height:24px;border-radius:50%;  
+    border:3px solid rgba(47,125,255,.15);  
+    border-top-color:var(--accent);  
+    margin:0 auto 10px;  
+    animation:spin .8s linear infinite;  
+  }  
+  @keyframes spin{to{transform:rotate(360deg)}}  
+  
+  .callout{  
+    border-radius:14px;  
+    padding:12px 14px;  
+    border:1px solid var(--border);  
+    background:var(--surface);  
+    margin-bottom:14px;  
+    color:var(--text);  
+    box-shadow:var(--shadow2);  
+  }  
+  .callout.blue{background:var(--accentSoft);border-color:rgba(47,125,255,.18)}  
+  .callout.amber{background:#fffbeb;border-color:#fde68a}  
+  .callout strong{font-weight:900}  
+  .callout .small{font-size:12px;line-height:1.6;color:var(--muted);margin-top:5px}  
+  
+  .hidden{display:none !important}  
+  .split{  
+    display:grid;  
+    grid-template-columns:1fr 1fr;  
+    gap:16px;  
+  }  
+  @media (max-width: 1000px){  
+    .split{grid-template-columns:1fr}  
+    .sidebar{position:fixed;left:-280px}  
+  }  
+  
+  .section-head{  
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;  
+    padding:4px 0 14px;  
+  }  
+  .section-head h3{margin:0;font-size:15px}  
+  .section-head p{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.5}  
+  .section-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}  
+  
+  .stat-note{  
+    font-size:11.5px;color:var(--muted);  
+    margin-top:10px;line-height:1.6;  
+  }  
+</style>  
+</head>  
+<body data-theme="light">  
+<div class="shell">  
+  <aside class="sidebar">  
+    <div class="brand">  
+      <div class="brand-badge">🅿️</div>  
+      <h1>Parking Intelligence</h1>  
+      <p>Bengaluru BTP · map-first dashboard</p>  
+    </div>  
+  
+    <div class="nav">  
+      <div class="nav-item active" data-page="overview"><span class="nav-icon">📍</span>Overview</div>  
+      <div class="nav-item" data-page="heatmap"><span class="nav-icon">🗺️</span>Hotspot Heatmap</div>  
+      <div class="nav-item" data-page="priority"><span class="nav-icon">🚨</span>Enforcement Priority</div>  
+      <div class="nav-item" data-page="anomalies"><span class="nav-icon">⚠️</span>Anomalies</div>  
+      <div class="nav-item" data-page="models"><span class="nav-icon">🤖</span>Model Registry</div>  
+    </div>  
+  
+    <div class="sidebar-foot">  
+      <div>Parking Intelligence v2</div>  
+      <div class="status"><span class="dot" id="api-dot"></span><span id="api-status">Checking API…</span></div>  
+    </div>  
+  </aside>  
+  
+  <main class="main">  
+    <div class="topbar">  
+      <div class="topbar-left">  
+        <div class="topbar-title">Bengaluru Parking Intelligence</div>  
+        <div class="topbar-sub">Interactive hotspot visibility · targeted enforcement · model-backed prioritization</div>  
+      </div>  
+  
+      <div class="top-actions">  
+        <div class="field">  
+          <label for="api-input">API</label>  
+          <input id="api-input" value="http://localhost:5000" />  
+        </div>  
+        <button class="btn small" id="refresh-btn">↻ Refresh</button>  
+        <button class="btn small" id="theme-btn">🌙 Dark</button>  
+      </div>  
+    </div>  
+  
+    <div class="content">  
+      <!-- OVERVIEW -->  
+      <section class="page active" id="page-overview">  
+        <div class="hero">  
+          <div class="hero-copy">  
+            <div>  
+              <div class="eyebrow">Bengaluru map-first overview</div>  
+              <h2>See illegal-parking hotspots before you send officers.</h2>  
+              <p>  
+                The front page is now a live Bengaluru heatmap. Hover points to inspect congestion impact,  
+                click a hotspot to pin its details, and use the filters to focus on critical areas only.  
+              </p>  
+              <div class="hero-actions">  
+                <button class="chip active" data-tier="All">All</button>  
+                <button class="chip" data-tier="Critical">Critical</button>  
+                <button class="chip" data-tier="High">High</button>  
+                <button class="chip" data-tier="Medium">Medium</button>  
+                <button class="chip" data-tier="Low">Low</button>  
+                <button class="chip" id="reset-view-btn">Reset view</button>  
+              </div>  
+              <div class="filters">  
+                <input class="input" id="search-input" placeholder="Search junction / cluster…" />  
+                <select class="select" id="sort-select">  
+                  <option value="score_desc">Sort by score ↓</option>  
+                  <option value="score_asc">Sort by score ↑</option>  
+                  <option value="violations_desc">Sort by violations ↓</option>  
+                </select>  
+                <div class="range">  
+                  <label class="muted" style="font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Min score</label>  
+                  <input type="range" id="min-score" min="0" max="10000" step="50" value="0" />  
+                  <span id="min-score-label" class="muted" style="font-size:11px;margin-left:8px;">0</span>  
+                </div>  
+              </div>  
+            </div>  
+            <div class="callout blue" style="margin:0">  
+              <strong>Operational question:</strong> Where are the hotspots, how much congestion do they create, and where should patrol go first?  
+              <div class="small">  
+                This dashboard answers that with a live map, ranked queues, anomaly feed, and model metadata from the backend.  
+              </div>  
+            </div>  
+          </div>  
+  
+          <div class="stack">  
+            <div class="card">  
+              <div class="card-head">  
+                <div>  
+                  <div class="card-title">Selected hotspot</div>  
+                  <div class="card-sub">Click a point on the map to inspect details</div>  
+                </div>  
+                <span class="badge b-sky">Live</span>  
+              </div>  
+              <div class="card-body" id="selected-card">  
+                <div class="empty">Select a hotspot from the map.</div>  
+              </div>  
+            </div>  
+  
+            <div class="card">  
+              <div class="card-head">  
+                <div>  
+                  <div class="card-title">Risk distribution</div>  
+                  <div class="card-sub">Current cluster mix by tier</div>  
+                </div>  
+              </div>  
+              <div class="card-body">  
+                <div class="ring-grid" id="risk-rings">  
+                  <div class="skeleton"><div class="spinner"></div>Loading…</div>  
+                </div>  
+              </div>  
+            </div>  
+          </div>  
+        </div>  
+  
+        <div class="kpi-grid" id="kpi-grid">  
+          <div class="kpi"><div class="kpi-label">Loading</div><div class="kpi-value">—</div><div class="kpi-sub">waiting for data</div></div>  
+        </div>  
+  
+        <div class="grid2">  
+          <div class="card">  
+            <div class="card-head">  
+              <div>  
+                <div class="card-title">Bengaluru hotspot heatmap</div>  
+                <div class="card-sub">Hover for details · click to pin · drag to pan · wheel to zoom</div>  
+              </div>  
+              <div class="section-actions">  
+                <button class="btn small" id="zoom-out">−</button>  
+                <button class="btn small" id="zoom-in">+</button>  
+              </div>  
+            </div>  
+            <div class="map-stage">  
+              <div class="map-wrap">  
+                <canvas id="map-canvas" class="map-canvas"></canvas>  
+                <div id="tooltip" class="tooltip"></div>  
+              </div>  
+            </div>  
+            <div class="legend">  
+              <span class="legend-item"><span class="legend-dot c"></span>Critical</span>  
+              <span class="legend-item"><span class="legend-dot h"></span>High</span>  
+              <span class="legend-item"><span class="legend-dot m"></span>Medium</span>  
+              <span class="legend-item"><span class="legend-dot l"></span>Low</span>  
+              <span class="legend-item"><span class="legend-dot a"></span>Selected point</span>  
+              <span class="legend-item">Circle size ∝ congestion score</span>  
+            </div>  
+          </div>  
+  
+          <div class="stack">  
+            <div class="card">  
+              <div class="card-head">  
+                <div>  
+                  <div class="card-title">Top hotspots</div>  
+                  <div class="card-sub">Ranked by congestion score</div>  
+                </div>  
+                <span class="badge b-sky" id="hotspot-count">0</span>  
+              </div>  
+              <div class="card-body">  
+                <div class="section-list" id="hotspot-list">  
+                  <div class="skeleton"><div class="spinner"></div>Loading…</div>  
+                </div>  
+              </div>  
+            </div>  
+  
+            <div class="card">  
+              <div class="card-head">  
+                <div>  
+                  <div class="card-title">Quick insight</div>  
+                  <div class="card-sub">What the model is saying right now</div>  
+                </div>  
+              </div>  
+              <div class="card-body" id="insight-box">  
+                <div class="empty">Loading insight…</div>  
+              </div>  
+            </div>  
+          </div>  
+        </div>  
+      </section>  
+  
+      <!-- HEATMAP -->  
+      <section class="page" id="page-heatmap">  
+        <div class="card">  
+          <div class="card-head">  
+            <div>  
+              <div class="card-title">Hotspot Heatmap</div>  
+              <div class="card-sub">Bengaluru map view with interactive cluster inspection</div>  
+            </div>  
+            <div class="section-actions">  
+              <button class="btn small" id="heat-reset">Reset view</button>  
+              <button class="btn small" id="heat-refresh">Reload data</button>  
+            </div>  
+          </div>  
+          <div class="card-body">  
+            <div class="split">  
+              <div class="card" style="box-shadow:none">  
+                <div class="card-head">  
+                  <div>  
+                    <div class="card-title">Map canvas</div>  
+                    <div class="card-sub">Use filters on the left to focus the clusters</div>  
+                  </div>  
+                </div>  
+                <div class="map-stage">  
+                  <div class="map-wrap" style="min-height:720px">  
+                    <canvas id="map-canvas-2" class="map-canvas"></canvas>  
+                    <div id="tooltip-2" class="tooltip"></div>  
+                  </div>  
+                </div>  
+                <div class="legend">  
+                  <span class="legend-item"><span class="legend-dot c"></span>Critical</span>  
+                  <span class="legend-item"><span class="legend-dot h"></span>High</span>  
+                  <span class="legend-item"><span class="legend-dot m"></span>Medium</span>  
+                  <span class="legend-item"><span class="legend-dot l"></span>Low</span>  
+                  <span class="legend-item">Hover/click clusters for full context</span>  
+                </div>  
+              </div>  
+  
+              <div class="stack">  
+                <div class="card">  
+                  <div class="card-head">  
+                    <div>  
+                      <div class="card-title">Cluster details</div>  
+                      <div class="card-sub">Explains the currently selected hotspot</div>  
+                    </div>  
+                  </div>  
+                  <div class="card-body" id="cluster-detail">  
+                    <div class="empty">Select a point on the map.</div>  
+                  </div>  
+                </div>  
+  
+                <div class="card">  
+                  <div class="card-head">  
+                    <div>  
+                      <div class="card-title">Cluster table</div>  
+                      <div class="card-sub">Top clusters returned by the backend</div>  
+                    </div>  
+                  </div>  
+                  <div class="card-body">  
+                    <div class="table-wrap">  
+                      <table class="table" id="cluster-table">  
+                        <thead>  
+                          <tr>  
+                            <th>Cluster</th><th>Violations</th><th>Score</th><th>Tier</th>  
+                          </tr>  
+                        </thead>  
+                        <tbody><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>  
+                      </table>  
+                    </div>  
+                  </div>  
+                </div>  
+              </div>  
+            </div>  
+          </div>  
+        </div>  
+      </section>  
+  
+      <!-- PRIORITY -->  
+      <section class="page" id="page-priority">  
+        <div class="card">  
+          <div class="card-head">  
+            <div>  
+              <div class="card-title">Enforcement priority</div>  
+              <div class="card-sub">Ranked action queue derived from cluster congestion and violations</div>  
+            </div>  
+            <div class="section-actions">  
+              <select class="select" id="priority-filter">  
+                <option value="">All tiers</option>  
+                <option value="Critical">Critical</option>  
+                <option value="High">High</option>  
+                <option value="Medium">Medium</option>  
+                <option value="Low">Low</option>  
+              </select>  
+              <button class="btn small" id="priority-refresh">Reload</button>  
+            </div>  
+          </div>  
+          <div class="card-body">  
+            <div class="table-wrap">  
+              <table class="table" id="priority-table">  
+                <thead>  
+                  <tr>  
+                    <th>#</th><th>Junction</th><th>Priority</th><th>Tier</th><th>Score</th><th>Violations</th>  
+                  </tr>  
+                </thead>  
+                <tbody><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>  
+              </table>  
+            </div>  
+          </div>  
+        </div>  
+      </section>  
+  
+      <!-- ANOMALIES -->  
+      <section class="page" id="page-anomalies">  
+        <div class="split">  
+          <div class="card">  
+            <div class="card-head">  
+              <div>  
+                <div class="card-title">Anomaly feed</div>  
+                <div class="card-sub">IsolationForest outputs and unusual days</div>  
+              </div>  
+              <button class="btn small" id="anom-refresh">Reload</button>  
+            </div>  
+            <div class="card-body">  
+              <div class="feed" id="anom-feed">  
+                <div class="skeleton"><div class="spinner"></div>Loading…</div>  
+              </div>  
+            </div>  
+          </div>  
+  
+          <div class="stack">  
+            <div class="card">  
+              <div class="card-head">  
+                <div>  
+                  <div class="card-title">Weekday pattern</div>  
+                  <div class="card-sub">Built from anomaly dates where available</div>  
+                </div>  
+              </div>  
+              <div class="card-body" id="weekday-box">  
+                <div class="empty">Loading weekday pattern…</div>  
+              </div>  
+            </div>  
+  
+            <div class="card">  
+              <div class="card-head">  
+                <div>  
+                  <div class="card-title">How to read anomalies</div>  
+                  <div class="card-sub">Short, judge-friendly explanation</div>  
+                </div>  
+              </div>  
+              <div class="card-body">  
+                <div class="callout blue" style="margin:0">  
+                  <strong>Lower anomaly scores mean more unusual days.</strong>  
+                  <div class="small">  
+                    Use this panel to identify festival days, event spillover, road closures, or enforcement bursts  
+                    that deviate from the normal Bengaluru parking pattern.  
+                  </div>  
+                </div>  
+              </div>  
+            </div>  
+          </div>  
+        </div>  
+      </section>  
+  
+      <!-- MODELS -->  
+      <section class="page" id="page-models">  
+        <div class="split">  
+          <div class="card">  
+            <div class="card-head">  
+              <div>  
+                <div class="card-title">Model summary</div>  
+                <div class="card-sub">Live metrics from the backend</div>  
+              </div>  
+              <button class="btn small" id="models-refresh">Reload</button>  
+            </div>  
+            <div class="card-body" id="summary-box">  
+              <div class="empty">Loading model summary…</div>  
+            </div>  
+          </div>  
+  
+          <div class="card">  
+            <div class="card-head">  
+              <div>  
+                <div class="card-title">Model registry</div>  
+                <div class="card-sub">Which artefacts are loaded on disk</div>  
+              </div>  
+            </div>  
+            <div class="card-body" id="model-grid">  
+              <div class="empty">Loading models…</div>  
+            </div>  
+          </div>  
+        </div>  
+      </section>  
+    </div>  
+  </main>  
+</div>  
+  
+<script>  
+  const state = {  
+    api: "http://localhost:5000",  
+    theme: "light",  
+    page: "overview",  
+    loaded: false,  
+    summary: null,  
+    clusters: [],  
+    points: [],  
+    anomalies: [],  
+    models: null,  
+    selectedTier: "All",  
+    selected: null,  
+    minScore: 0,  
+    search: "",  
+    sort: "score_desc",  
+    priorityFilter: "",  
+    map: {  
+      zoom: 1,  
+      panX: 0,  
+      panY: 0,  
+      dragging: false,  
+      startX: 0,  
+      startY: 0,  
+      baseWidth: 1,  
+      baseHeight: 1,  
+      bounds: null,  
+      hits: [],  
+      selectedId: null  
+    }  
+  };  
+  
+  const $ = (id) => document.getElementById(id);  
+  
+  function setApi(v){  
+    state.api = String(v || "").replace(/\/$/, "") || "http://localhost:5000";  
+    $("api-input").value = state.api;  
+  }  
+  
+  async function apiFetch(path){  
+    const url = state.api + path;  
+    const res = await fetch(url);  
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);  
+    return await res.json();  
+  }  
+  
+  function formatNum(v, digits = 0){  
+    const n = Number(v);  
+    if(!Number.isFinite(n)) return "—";  
+    if(digits > 0) return n.toFixed(digits);  
+    return new Intl.NumberFormat("en-IN").format(n);  
+  }  
+  
+  function formatPct(v){  
+    const n = Number(v);  
+    if(!Number.isFinite(n)) return "—";  
+    return `${(n * 100).toFixed(1)}%`;  
+  }  
+  
+  function cleanName(v){  
+    const s = String(v ?? "").replace(/^BTP\d+\s*-\s*/i, "").trim();  
+    return s || "Unnamed";  
+  }  
+  
+  function riskTier(score){  
+    const s = Number(score) || 0;  
+    if(s >= 8000) return "Critical";  
+    if(s >= 3000) return "High";  
+    if(s >= 1000) return "Medium";  
+    return "Low";  
+  }  
+  
+  function badgeClass(tier){  
+    return ({  
+      Critical: "b-critical",  
+      High: "b-high",  
+      Medium: "b-medium",  
+      Low: "b-low"  
+    })[tier] || "b-sky";  
+  }  
+  
+  function tierColor(tier){  
+    return ({  
+      Critical: getCSS("--critical"),  
+      High: getCSS("--high"),  
+      Medium: getCSS("--medium"),  
+      Low: getCSS("--low")  
+    })[tier] || getCSS("--accent");  
+  }  
+  
+  function getCSS(name){  
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();  
+  }  
+  
+  function normalize(row = {}){  
+    const score = Number(  
+      row.congestion_score ??  
+      row.congestion_rank_score ??  
+      row.priority_score ??  
+      row.total_score ??  
+      row.score ??  
+      0  
+    );  
+    return {  
+      raw: row,  
+      id: row.cluster_id ?? row.id ?? row.junction_id ?? row.top_junction ?? row.junction_clean ?? cleanName(row.label),  
+      name: cleanName(row.top_junction ?? row.junction_clean ?? row.junction ?? row.label ?? row.name),  
+      lat: Number(row.avg_lat ?? row.centroid_lat ?? row.latitude ?? row.lat ?? 0),  
+      lon: Number(row.avg_lon ?? row.centroid_lon ?? row.longitude ?? row.lon ?? 0),  
+      score,  
+      violations: Number(row.total_violations ?? row.violation_count ?? row.daily_count ?? row.violations ?? 0),  
+      priority: Number(row.priority_score ?? row.rank_score ?? row.congestion_score ?? score ?? 0),  
+      tier: row.risk_tier ?? row.risk_level ?? riskTier(score),  
+      rank: Number(row.priority_rank ?? row.rank ?? 0)  
+    };  
+  }  
+  
+  function pickList(payload, keys = ["data", "clusters", "hotspots", "grid", "zones", "anomalies"]){  
+    if(!payload) return [];  
+    if(Array.isArray(payload)) return payload;  
+    for(const k of keys){  
+      if(Array.isArray(payload[k])) return payload[k];  
+    }  
+    return [];  
+  }  
+  
+  function setTheme(theme){  
+    state.theme = theme;  
+    document.body.dataset.theme = theme;  
+    $("theme-btn").textContent = theme === "dark" ? "☀️ Light" : "🌙 Dark";  
+    localStorage.setItem("parking_theme", theme);  
+    requestAnimationFrame(() => {  
+      drawMap("map-canvas");  
+      drawMap("map-canvas-2");  
+    });  
+  }  
+  
+  function showPage(page){  
+    state.page = page;  
+    document.querySelectorAll(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.page === page));  
+    document.querySelectorAll(".page").forEach(el => el.classList.remove("active"));  
+    const p = $("page-" + page);  
+    if(p) p.classList.add("active");  
+    if(page === "overview") drawMap("map-canvas");  
+    if(page === "heatmap") drawMap("map-canvas-2");  
+  }  
+  
+  function setSelected(item){  
+    state.selected = item;  
+    state.map.selectedId = item ? item.id : null;  
+    renderSelectedCard();  
+    drawMap(state.page === "heatmap" ? "map-canvas-2" : "map-canvas");  
+  }  
+  
+  function setTier(tier){  
+    state.selectedTier = tier;  
+    document.querySelectorAll(".chip[data-tier]").forEach(btn => btn.classList.toggle("active", btn.dataset.tier === tier));  
+    drawMap(state.page === "heatmap" ? "map-canvas-2" : "map-canvas");  
+    renderHotspotList();  
+    renderPriorityTable();  
+  }  
+  
+  function applySortFilter(){  
+    state.search = $("search-input").value.trim().toLowerCase();  
+    state.minScore = Number($("min-score").value) || 0;  
+    state.sort = $("sort-select").value;  
+    $("min-score-label").textContent = formatNum(state.minScore);  
+    drawMap(state.page === "heatmap" ? "map-canvas-2" : "map-canvas");  
+    renderHotspotList();  
+    renderPriorityTable();  
+  }  
+  
+  function filteredItems(){  
+    let items = state.points.map(normalize).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));  
+  
+    if(state.selectedTier !== "All"){  
+      items = items.filter(p => p.tier === state.selectedTier);  
+    }  
+    if(state.minScore > 0){  
+      items = items.filter(p => p.score >= state.minScore);  
+    }  
+    if(state.search){  
+      items = items.filter(p =>  
+        p.name.toLowerCase().includes(state.search) ||  
+        String(p.id).toLowerCase().includes(state.search)  
+      );  
+    }  
+  
+    if(state.sort === "score_desc") items.sort((a,b) => b.score - a.score);  
+    if(state.sort === "score_asc") items.sort((a,b) => a.score - b.score);  
+    if(state.sort === "violations_desc") items.sort((a,b) => b.violations - a.violations);  
+    return items;  
+  }  
+  
+  function currentItemsForPriority(){  
+    let items = state.clusters.map(normalize);  
+    if(state.priorityFilter){  
+      items = items.filter(p => p.tier === state.priorityFilter);  
+    }  
+    items.sort((a,b) => b.score - a.score);  
+    return items;  
+  }  
+  
+  function updateApiStatus(ok){  
+    const dot = $("api-dot");  
+    const label = $("api-status");  
+    if(ok){  
+      dot.className = "dot ok";  
+      label.textContent = "API online";  
+    }else{  
+      dot.className = "dot off";  
+      label.textContent = "API offline";  
+    }  
+  }  
+  
+  async function loadAll(){  
+    try{  
+      const [summary, clusters, points, anomalies, models] = await Promise.all([  
+        apiFetch("/api/summary"),  
+        apiFetch("/api/clusters?limit=200"),  
+        apiFetch("/api/map-points?top=200&source=clusters"),  
+        apiFetch("/api/anomalies?limit=120"),  
+        apiFetch("/api/model-info")  
+      ]);  
+  
+      state.summary = summary || {};  
+      state.clusters = pickList(clusters, ["data", "clusters"]);  
+      state.points = pickList(points, ["data", "points", "clusters"]);  
+      if(!state.points.length && state.clusters.length){  
+        state.points = state.clusters;  
+      }  
+      state.anomalies = pickList(anomalies, ["data", "anomalies"]);  
+      state.models = models || {};  
+      state.loaded = true;  
+  
+      const ok = !!(summary || clusters || points || anomalies || models);  
+      updateApiStatus(ok);  
+  
+      renderAll();  
+      fitMapToData();  
+      drawMap("map-canvas");  
+      drawMap("map-canvas-2");  
+    }catch(err){  
+      updateApiStatus(false);  
+      console.error(err);  
+      $("kpi-grid").innerHTML = `<div class="kpi" style="grid-column:1/-1"><div class="kpi-label">Error</div><div class="kpi-value">API</div><div class="kpi-sub">${err.message}</div></div>`;  
+      $("selected-card").innerHTML = `<div class="empty">Failed to load data.</div>`;  
+    }  
+  }  
+  
+  function renderAll(){  
+    renderKpis();  
+    renderRiskRings();  
+    renderInsight();  
+    renderHotspotList();  
+    renderPriorityTable();  
+    renderAnomalies();  
+    renderModels();  
+    renderSummaryBox();  
+    renderSelectedCard();  
+    renderClusterTable();  
+    renderWeekdayBox();  
+  }  
+  
+  function renderKpis(){  
+    const s = state.summary || {};  
+    const fm = s.forecast_metrics || {};  
+    const cards = [  
+      ["Total violations", s.total_violations, "all junctions"],  
+      ["Clusters", s.total_clusters, "DBSCAN hotspots"],  
+      ["Junctions", s.total_junctions, "GPS-valid rows"],  
+      ["Avg congestion", s.avg_congestion_score, "rank score"],  
+      ["Anomaly days", s.anomaly_days, "IsolationForest"],  
+      ["Forecast R²", fm.R2, "held-out split"]  
+    ];  
+    $("kpi-grid").innerHTML = cards.map(([label, value, sub]) => `  
+      <div class="kpi">  
+        <div class="kpi-label">${label}</div>  
+        <div class="kpi-value">${Number.isFinite(Number(value)) ? formatNum(value, String(label).includes("R²") ? 3 : 0) : (value ?? "—")}</div>  
+        <div class="kpi-sub">${sub}</div>  
+      </div>  
+    `).join("");  
+  }  
+  
+  function renderRiskRings(){  
+    const items = filteredItems();  
+    const counts = {Critical:0, High:0, Medium:0, Low:0};  
+    items.forEach(p => { if(counts[p.tier] !== undefined) counts[p.tier]++; });  
+    const total = items.length || 1;  
+    $("risk-rings").innerHTML = ["Critical","High","Medium","Low"].map(tier => {  
+      const pct = Math.round((counts[tier] / total) * 100);  
+      return `  
+        <div style="flex:1;min-width:110px">  
+          <div class="ring" style="background:conic-gradient(${tierColor(tier)} 0% ${pct}%, rgba(47,125,255,.12) ${pct}% 100%)">  
+            <div class="ring-val">${counts[tier]}</div>  
+          </div>  
+          <div class="ring-lbl">${tier}</div>  
+          <div class="ring-sub">${pct}%</div>  
+        </div>  
+      `;  
+    }).join("");  
+  }  
+  
+  function renderSelectedCard(){  
+    const p = state.selected;  
+    if(!p){  
+      $("selected-card").innerHTML = `<div class="empty">Select a hotspot from the map.</div>`;  
+      $("cluster-detail").innerHTML = `<div class="empty">Select a point on the map.</div>`;  
+      return;  
+    }  
+    const html = `  
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">  
+        <div style="min-width:0">  
+          <div style="font-size:18px;font-weight:950;line-height:1.2">${p.name}</div>  
+          <div class="muted" style="font-size:12px;margin-top:4px">${formatNum(p.lat,4)}, ${formatNum(p.lon,4)}</div>  
+        </div>  
+        <span class="badge ${badgeClass(p.tier)}">${p.tier}</span>  
+      </div>  
+  
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px">  
+        <div class="mini"><div class="l">Score</div><div class="v">${formatNum(p.score,0)}</div><div class="s">congestion</div></div>  
+        <div class="mini"><div class="l">Violations</div><div class="v">${formatNum(p.violations,0)}</div><div class="s">count</div></div>  
+        <div class="mini"><div class="l">Rank</div><div class="v">${p.rank ? "#" + p.rank : "—"}</div><div class="s">priority</div></div>  
+      </div>  
+  
+      <div class="callout blue" style="margin-top:14px;margin-bottom:0">  
+        <strong>Why it matters</strong>  
+        <div class="small">  
+          This hotspot is being prioritized because its congestion-weighted score is high relative to the rest of Bengaluru.  
+          Use it to decide where enforcement should go first.  
+        </div>  
+      </div>  
+    `;  
+    $("selected-card").innerHTML = html;  
+    $("cluster-detail").innerHTML = html;  
+  }  
+  
+  function renderInsight(){  
+    const s = state.summary || {};  
+    const fm = s.forecast_metrics || {};  
+    const top = filteredItems()[0];  
+    const text = top  
+      ? `Current top hotspot is <strong>${top.name}</strong> with <strong>${formatNum(top.score)}</strong> score and <strong>${formatNum(top.violations)}</strong> violations.`  
+      : `No hotspot loaded yet.`;  
+    const fore = Number.isFinite(Number(fm.R2))  
+      ? `Forecast R² is <strong>${formatNum(fm.R2,3)}</strong> and anomaly days are <strong>${formatNum(s.anomaly_days,0)}</strong>.`  
+      : `Forecast metrics are available from the backend summary.`;  
+  
+    $("insight-box").innerHTML = `  
+      <div style="display:flex;flex-direction:column;gap:10px">  
+        <div class="callout blue" style="margin:0">  
+          <div>${text}</div>  
+          <div class="small">${fore}</div>  
+        </div>  
+        <div class="stat-note">  
+          Tip: filter to <strong>Critical</strong> tier to focus on the smallest set of high-impact enforcement targets.  
+        </div>  
+      </div>  
+    `;  
+  }  
+  
+  function renderHotspotList(){  
+    const items = filteredItems().slice(0, 12);  
+    $("hotspot-count").textContent = `${items.length}`;  
+    if(!items.length){  
+      $("hotspot-list").innerHTML = `<div class="empty">No hotspots match the current filters.</div>`;  
+      return;  
+    }  
+    $("hotspot-list").innerHTML = items.map((p, i) => `  
+      <div class="row ${state.selected && state.selected.id === p.id ? "active" : ""}" data-id="${String(p.id)}">  
+        <div class="rank">#${i + 1}</div>  
+        <div class="row-main">  
+          <div class="row-title">${p.name}</div>  
+          <div class="row-meta">${formatNum(p.lat,4)}, ${formatNum(p.lon,4)} · ${formatNum(p.violations,0)} violations</div>  
+          <div class="scorebar"><div style="width:${Math.min(100, (p.score / Math.max(1, items[0].score)) * 100)}%"></div></div>  
+        </div>  
+        <div class="row-score">  
+          <div class="score">${formatNum(p.score,0)}</div>  
+          <span class="badge ${badgeClass(p.tier)}" style="margin-top:5px">${p.tier}</span>  
+        </div>  
+      </div>  
+    `).join("");  
+    $("hotspot-list").querySelectorAll(".row").forEach(el => {  
+      el.addEventListener("click", () => {  
+        const id = el.dataset.id;  
+        const item = items.find(x => String(x.id) === String(id));  
+        if(item) setSelected(item);  
+      });  
+    });  
+  }  
+  
+  function renderPriorityTable(){  
+    const tier = $("priority-filter").value || state.priorityFilter || "";  
+    let items = state.clusters.map(normalize);  
+    if(tier) items = items.filter(p => p.tier === tier);  
+    items.sort((a,b) => b.score - a.score);  
+    items = items.slice(0, 20);  
+  
+    if(!items.length){  
+      $("priority-table").querySelector("tbody").innerHTML = `<tr><td colspan="6" class="muted">No priority rows for this filter.</td></tr>`;  
+      return;  
+    }  
+  
+    $("priority-table").querySelector("tbody").innerHTML = items.map((p, i) => `  
+      <tr data-id="${String(p.id)}">  
+        <td>${i + 1}</td>  
+        <td>${p.name}</td>  
+        <td>${formatNum(p.priority,0)}</td>  
+        <td><span class="badge ${badgeClass(p.tier)}">${p.tier}</span></td>  
+        <td>${formatNum(p.score,0)}</td>  
+        <td>${formatNum(p.violations,0)}</td>  
+      </tr>  
+    `).join("");  
+  
+    $("priority-table").querySelectorAll("tbody tr").forEach(tr => {  
+      tr.addEventListener("click", () => {  
+        const item = items.find(x => String(x.id) === String(tr.dataset.id));  
+        if(item){  
+          setSelected(item);  
+          showPage("heatmap");  
+        }  
+      });  
+    });  
+  }  
+  
+  function renderAnomalies(){  
+    const rows = state.anomalies.map(r => r || {}).slice(0, 100);  
+    if(!rows.length){  
+      $("anom-feed").innerHTML = `<div class="empty">No anomaly rows available.</div>`;  
+      return;  
+    }  
+    $("anom-feed").innerHTML = rows.map(r => {  
+      const isA = Number(r.anomaly_flag) === -1 || String(r.anomaly_flag) === "-1";  
+      const day = r.date || r.day || "—";  
+      return `  
+        <div class="feed-item">  
+          <div class="feed-ico">${isA ? "🔴" : "🟢"}</div>  
+          <div style="min-width:0;flex:1">  
+            <div class="feed-title">${cleanName(r.junction_clean ?? r.top_junction ?? r.junction ?? "Unknown")}</div>  
+            <div class="feed-meta">  
+              Date: <strong>${day}</strong><br>  
+              Count: <strong>${formatNum(r.daily_count ?? r.count ?? 0,0)}</strong>  
+              · Z-score: <strong>${formatNum(r.z_score ?? 0,2)}</strong>  
+              · Impact: <strong>${formatNum(r.daily_impact ?? 0,0)}</strong>  
+            </div>  
+          </div>  
+          <div class="feed-score">${formatNum(r.anomaly_score ?? 0,4)}</div>  
+          <span class="badge ${isA ? "b-critical" : "b-sky"}">${isA ? "Anomaly" : "Normal"}</span>  
+        </div>  
+      `;  
+    }).join("");  
+  }  
+  
+  function renderWeekdayBox(){  
+    const rows = state.anomalies || [];  
+    const counts = [0,0,0,0,0,0,0];  
+    rows.forEach(r => {  
+      const d = r.date || r.day;  
+      if(!d) return;  
+      const dt = new Date(d);  
+      if(!Number.isNaN(dt.getTime())) counts[dt.getDay()]++;  
+    });  
+  
+    const labels = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];  
+    const max = Math.max(...counts, 1);  
+    const bars = labels.map((lab, i) => `  
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">  
+        <div style="width:56px;font-size:11px;color:var(--muted);font-weight:900">${lab}</div>  
+        <div style="flex:1;height:10px;border-radius:999px;background:var(--accentSoft);overflow:hidden;border:1px solid var(--border)">  
+          <div style="width:${(counts[i] / max) * 100}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div>  
+        </div>  
+        <div style="width:26px;text-align:right;font-size:11px;font-weight:900">${counts[i]}</div>  
+      </div>  
+    `).join("");  
+  
+    $("weekday-box").innerHTML = bars || `<div class="empty">No date data found in anomalies.</div>`;  
+  }  
+  
+  function renderSummaryBox(){  
+    const s = state.summary || {};  
+    const fm = s.forecast_metrics || {};  
+    $("summary-box").innerHTML = `  
+      <div class="mini-kpis">  
+        <div class="mini"><div class="l">Total violations</div><div class="v">${formatNum(s.total_violations,0)}</div><div class="s">all clusters</div></div>  
+        <div class="mini"><div class="l">Total clusters</div><div class="v">${formatNum(s.total_clusters,0)}</div><div class="s">DBSCAN summary</div></div>  
+        <div class="mini"><div class="l">Anomaly days</div><div class="v">${formatNum(s.anomaly_days,0)}</div><div class="s">IsolationForest</div></div>  
+        <div class="mini"><div class="l">Forecast R²</div><div class="v">${formatNum(fm.R2,3)}</div><div class="s">held-out split</div></div>  
+      </div>  
+  
+      <div class="callout blue" style="margin-top:14px;margin-bottom:0">  
+        <strong>Live backend summary</strong>  
+        <div class="small">  
+          Uses the metrics returned by <code>/api/summary</code>, including forecast metrics, cluster totals, and anomaly counts.  
+        </div>  
+      </div>  
+    `;  
+  }  
+  
+  function renderModels(){  
+    const m = state.models || {};  
+    const entries = Object.entries(m);  
+    if(!entries.length){  
+      $("model-grid").innerHTML = `<div class="empty">No model metadata available.</div>`;  
+      return;  
+    }  
+    $("model-grid").innerHTML = `  
+      <div class="section-list">  
+        ${entries.map(([key, val]) => `  
+          <div class="row" style="cursor:default">  
+            <div class="rank">🤖</div>  
+            <div class="row-main">  
+              <div class="row-title">${key}</div>  
+              <div class="row-meta">${val.loaded ? `Loaded · ${val.type || "Unknown"} · ${val.module || ""}` : `Not loaded · ${val.reason || "Unavailable"}`}</div>  
+            </div>  
+            <span class="badge ${val.loaded ? "b-low" : "b-critical"}">${val.loaded ? "Loaded" : "Missing"}</span>  
+          </div>  
+        `).join("")}  
+      </div>  
+    `;  
+  }  
+  
+  function renderClusterTable(){  
+    const rows = filteredItems().slice(0, 35);  
+    const tbody = $("cluster-table").querySelector("tbody");  
+    if(!rows.length){  
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">No clusters for this filter.</td></tr>`;  
+      return;  
+    }  
+    tbody.innerHTML = rows.map((p, i) => `  
+      <tr data-id="${String(p.id)}">  
+        <td>${i + 1}. ${p.name}</td>  
+        <td>${formatNum(p.violations,0)}</td>  
+        <td>${formatNum(p.score,0)}</td>  
+        <td><span class="badge ${badgeClass(p.tier)}">${p.tier}</span></td>  
+      </tr>  
+    `).join("");  
+    tbody.querySelectorAll("tr").forEach(tr => {  
+      tr.addEventListener("click", () => {  
+        const item = rows.find(x => String(x.id) === String(tr.dataset.id));  
+        if(item){  
+          setSelected(item);  
+          showPage("overview");  
+        }  
+      });  
+    });  
+  }  
+  
+  function fitMapToData(){  
+    const pts = filteredItems();  
+    if(!pts.length){  
+      state.map.bounds = null;  
+      state.map.zoom = 1;  
+      state.map.panX = 0;  
+      state.map.panY = 0;  
+      return;  
+    }  
+    const lats = pts.map(p => p.lat).filter(Number.isFinite);  
+    const lons = pts.map(p => p.lon).filter(Number.isFinite);  
+    const latMin = Math.min(...lats), latMax = Math.max(...lats);  
+    const lonMin = Math.min(...lons), lonMax = Math.max(...lons);  
+    state.map.bounds = {  
+      latMin: latMin - 0.012,  
+      latMax: latMax + 0.012,  
+      lonMin: lonMin - 0.012,  
+      lonMax: lonMax + 0.012  
+    };  
+    state.map.zoom = 1;  
+    state.map.panX = 0;  
+    state.map.panY = 0;  
+  }  
+  
+  function mapBase(canvas, p, pad = 46){  
+    const b = state.map.bounds;  
+    const w = canvas.clientWidth || canvas.width;  
+    const h = canvas.clientHeight || canvas.height;  
+    if(!b) return {x:w/2, y:h/2};  
+  
+    const nx = (p.lon - b.lonMin) / Math.max(0.000001, (b.lonMax - b.lonMin));  
+    const ny = 1 - (p.lat - b.latMin) / Math.max(0.000001, (b.latMax - b.latMin));  
+    const x = pad + nx * (w - pad * 2);  
+    const y = pad + ny * (h - pad * 2);  
+    return {x, y};  
+  }  
+  
+  function drawMap(canvasId){  
+    const canvas = $(canvasId);  
+    if(!canvas) return;  
+    const ctx = canvas.getContext("2d");  
+    const dpr = Math.max(1, window.devicePixelRatio || 1);  
+    const w = canvas.parentElement.clientWidth;  
+    const h = canvas.parentElement.clientHeight;  
+    canvas.width = Math.floor(w * dpr);  
+    canvas.height = Math.floor(h * dpr);  
+    canvas.style.width = w + "px";  
+    canvas.style.height = h + "px";  
+    ctx.setTransform(dpr,0,0,dpr,0,0);  
+    ctx.clearRect(0,0,w,h);  
+  
+    const pts = filteredItems();  
+    if(!pts.length){  
+      ctx.fillStyle = getCSS("--muted");  
+      ctx.font = "16px Inter, sans-serif";  
+      ctx.textAlign = "center";  
+      ctx.fillText("No hotspot data for the current filter", w/2, h/2);  
+      return;  
+    }  
+  
+    const bg = state.theme === "dark"  
+      ? "rgba(255,255,255,.03)"  
+      : "rgba(255,255,255,.34)";  
+    ctx.fillStyle = bg;  
+    ctx.fillRect(0,0,w,h);  
+  
+    const gridColor = state.theme === "dark"  
+      ? "rgba(154,217,255,.10)"  
+      : "rgba(47,125,255,.10)";  
+    ctx.strokeStyle = gridColor;  
+    ctx.lineWidth = 1;  
+    for(let i=0;i<=6;i++){  
+      const x = i * w / 6;  
+      const y = i * h / 6;  
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke();  
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();  
+    }  
+  
+    const b = state.map.bounds;  
+    ctx.fillStyle = state.theme === "dark" ? "rgba(255,255,255,.10)" : "rgba(47,125,255,.10)";  
+    ctx.font = "700 13px Inter, sans-serif";  
+    ctx.fillText("Bengaluru", 18, 22);  
+    ctx.font = "11px Inter, sans-serif";  
+    ctx.fillStyle = getCSS("--muted");  
+  
+    if(b){  
+      ctx.fillText(`${b.latMax.toFixed(3)}°N`, 12, 40);  
+      ctx.fillText(`${b.latMin.toFixed(3)}°N`, 12, h - 12);  
+      ctx.fillText(`${b.lonMin.toFixed(3)}°E`, 48, h - 12);  
+      ctx.fillText(`${b.lonMax.toFixed(3)}°E`, w - 78, h - 12);  
+    }  
+  
+    const maxScore = Math.max(...pts.map(p => p.score), 1);  
+    const minScore = state.minScore || 0;  
+    const hits = [];  
+  
+    pts.forEach((p) => {  
+      if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;  
+      if(p.score < minScore) return;  
+  
+      const base = mapBase(canvas, p);  
+      const zoom = state.map.zoom;  
+      const x = base.x * zoom + state.map.panX;  
+      const y = base.y * zoom + state.map.panY;  
+      const radius = Math.max(5, Math.min(34, (p.score / maxScore) * 28 + 5));  
+      const active = state.map.selectedId && String(state.map.selectedId) === String(p.id);  
+      const hovered = state.map.hoverId && String(state.map.hoverId) === String(p.id);  
+      const col = tierColor(p.tier);  
+  
+      ctx.beginPath();  
+      ctx.arc(x, y, radius * 1.7, 0, Math.PI * 2);  
+      const halo = ctx.createRadialGradient(x, y, 0, x, y, radius * 1.7);  
+      halo.addColorStop(0, col.replace(")", ",.20)").replace("rgb", "rgba"));  
+      halo.addColorStop(1, "transparent");  
+      ctx.fillStyle = halo;  
+      ctx.fill();  
+  
+      ctx.beginPath();  
+      ctx.arc(x, y, active || hovered ? radius + 2 : radius, 0, Math.PI * 2);  
+      ctx.fillStyle = active ? getCSS("--accent") : col;  
+      ctx.fill();  
+      ctx.lineWidth = active || hovered ? 3 : 1.4;  
+      ctx.strokeStyle = state.theme === "dark" ? "rgba(255,255,255,.55)" : "rgba(255,255,255,.85)";  
+      ctx.stroke();  
+  
+      if(active){  
+        ctx.beginPath();  
+        ctx.arc(x, y, radius + 7, 0, Math.PI * 2);  
+        ctx.strokeStyle = getCSS("--accent2");  
+        ctx.lineWidth = 2;  
+        ctx.stroke();  
+      }  
+  
+      if(radius > 18 || hovered || active){  
+        ctx.fillStyle = state.theme === "dark" ? "#fff" : "#1e293b";  
+        ctx.font = "10px Inter, sans-serif";  
+        ctx.textAlign = "center";  
+        ctx.fillText(p.name.slice(0,14), x, y + radius + 12);  
+      }  
+  
+      hits.push({ ...p, x, y, radius, baseX: base.x, baseY: base.y });  
+    });  
+  
+    state.map.hits = hits;  
+  }  
+  
+  function updateTooltip(canvasId, tipId, evt){  
+    const canvas = $(canvasId);  
+    const tip = $(tipId);  
+    if(!canvas || !tip) return;  
+  
+    const rect = canvas.getBoundingClientRect();  
+    const mx = evt.clientX - rect.left;  
+    const my = evt.clientY - rect.top;  
+  
+    const hit = state.map.hits.find(p => Math.hypot(mx - p.x, my - p.y) <= p.radius + 6);  
+    state.map.hoverId = hit ? hit.id : null;  
+  
+    if(hit){  
+      tip.style.display = "block";  
+      tip.style.left = (evt.clientX + 12) + "px";  
+      tip.style.top = (evt.clientY - 8) + "px";  
+      tip.innerHTML = `  
+        <strong>${hit.name}</strong>  
+        Tier: ${hit.tier}<br>  
+        Score: ${formatNum(hit.score,0)}<br>  
+        Violations: ${formatNum(hit.violations,0)}<br>  
+        GPS: ${formatNum(hit.lat,4)}, ${formatNum(hit.lon,4)}  
+      `;  
+    }else{  
+      tip.style.display = "none";  
+    }  
+    drawMap(canvasId);  
+  }  
+  
+  function bindMapInteractions(canvasId, tipId){  
+    const canvas = $(canvasId);  
+    if(!canvas) return;  
+  
+    canvas.addEventListener("mousemove", (evt) => updateTooltip(canvasId, tipId, evt));  
+  
+    canvas.addEventListener("mouseleave", () => {  
+      const tip = $(tipId);  
+      if(tip) tip.style.display = "none";  
+      state.map.hoverId = null;  
+      drawMap(canvasId);  
+    });  
+  
+    canvas.addEventListener("click", (evt) => {  
+      const rect = canvas.getBoundingClientRect();  
+      const mx = evt.clientX - rect.left;  
+      const my = evt.clientY - rect.top;  
+      const hit = state.map.hits.find(p => Math.hypot(mx - p.x, my - p.y) <= p.radius + 6);  
+      if(hit){  
+        setSelected(hit);  
+      }  
+    });  
+  
+    canvas.addEventListener("wheel", (evt) => {  
+      evt.preventDefault();  
+      const zoomFactor = evt.deltaY < 0 ? 1.12 : 0.89;  
+      const old = state.map.zoom;  
+      const next = Math.min(4, Math.max(0.7, old * zoomFactor));  
+      const rect = canvas.getBoundingClientRect();  
+      const mx = evt.clientX - rect.left;  
+      const my = evt.clientY - rect.top;  
+      state.map.panX = mx - (mx - state.map.panX) * (next / old);  
+      state.map.panY = my - (my - state.map.panY) * (next / old);  
+      state.map.zoom = next;  
+      drawMap(canvasId);  
+    }, { passive:false });  
+  
+    let drag = false;  
+    let sx = 0, sy = 0;  
+    canvas.addEventListener("pointerdown", (evt) => {  
+      drag = true;  
+      canvas.setPointerCapture(evt.pointerId);  
+      state.map.dragging = true;  
+      sx = evt.clientX;  
+      sy = evt.clientY;  
+    });  
+    canvas.addEventListener("pointermove", (evt) => {  
+      if(!drag) return;  
+      const dx = evt.clientX - sx;  
+      const dy = evt.clientY - sy;  
+      sx = evt.clientX;  
+      sy = evt.clientY;  
+      state.map.panX += dx;  
+      state.map.panY += dy;  
+      drawMap(canvasId);  
+    });  
+    canvas.addEventListener("pointerup", () => {  
+      drag = false;  
+      state.map.dragging = false;  
+    });  
+    canvas.addEventListener("dblclick", () => {  
+      fitMapToData();  
+      drawMap(canvasId);  
+    });  
+  }  
+  
+  function zoom(delta){  
+    const canv = state.page === "heatmap" ? "map-canvas-2" : "map-canvas";  
+    const canvas = $(canv);  
+    if(!canvas) return;  
+    const old = state.map.zoom;  
+    const next = Math.min(4, Math.max(0.7, old * delta));  
+    state.map.zoom = next;  
+    drawMap(canv);  
+  }  
+  
+  function renderPageSpecific(){  
+    drawMap(state.page === "heatmap" ? "map-canvas-2" : "map-canvas");  
+  }  
+  
+  function computeHourlyFromAnomalies(){  
+    const buckets = Array.from({length:24}, () => 0);  
+    state.anomalies.forEach(r => {  
+      const d = r.date || r.created_dt || r.created_datetime;  
+      if(!d) return;  
+      const dt = new Date(d);  
+      if(Number.isNaN(dt.getTime())) return;  
+      buckets[dt.getHours()]++;  
+    });  
+    return buckets;  
+  }  
+  
+  function renderHourBox(){  
+    const hours = computeHourlyFromAnomalies();  
+    const max = Math.max(...hours, 1);  
+    const grid = hours.map((v, h) => {  
+      const t = v / max;  
+      const alpha = 0.22 + t * 0.72;  
+      return `<div class="hour-cell" style="background:rgba(102,184,255,${alpha})" data-tip="${String(h).padStart(2,'0')}:00 — ${v} records"></div>`;  
+    }).join("");  
+    const ticks = hours.map((_, h) => `<div>${String(h).padStart(2,'0')}</div>`).join("");  
+    return `  
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">  
+        Hourly distribution from anomaly timestamps where available.  
+      </div>  
+      <div class="temporal-grid">${grid}</div>  
+      <div class="hour-axis">${ticks}</div>  
+      <div class="stat-note">This is a quick visibility layer for time-based clustering and unusual spikes.</div>  
+    `;  
+  }  
+  
+  function renderOverviewTemporalCard(){  
+    return `  
+      <div class="card" style="margin-top:16px">  
+        <div class="card-head">  
+          <div>  
+            <div class="card-title">Temporal visibility</div>  
+            <div class="card-sub">Quick hourly pattern from anomaly data</div>  
+          </div>  
+        </div>  
+        <div class="card-body">${renderHourBox()}</div>  
+      </div>  
+    `;  
+  }  
+  
+  function renderModelRegistryGrid(){  
+    const m = state.models || {};  
+    return Object.entries(m).map(([k, v]) => `  
+      <div class="row" style="cursor:default">  
+        <div class="rank">🤖</div>  
+        <div class="row-main">  
+          <div class="row-title">${k}</div>  
+          <div class="row-meta">${v.loaded ? `Loaded · ${v.type || "Unknown"} · ${v.module || "unknown"}` : `Missing · ${v.reason || "unavailable"}`}</div>  
+        </div>  
+        <span class="badge ${v.loaded ? "b-low" : "b-critical"}">${v.loaded ? "Loaded" : "Missing"}</span>  
+      </div>  
+    `).join("") || `<div class="empty">No model metadata available.</div>`;  
+  }  
+  
+  function renderPageExtras(){  
+    // Heatmap page extras  
+    $("cluster-table").querySelector("tbody").innerHTML = filteredItems().slice(0, 40).map((p, i) => `  
+      <tr data-id="${String(p.id)}">  
+        <td>${i + 1}. ${p.name}</td>  
+        <td>${formatNum(p.violations,0)}</td>  
+        <td>${formatNum(p.score,0)}</td>  
+        <td><span class="badge ${badgeClass(p.tier)}">${p.tier}</span></td>  
+      </tr>  
+    `).join("");  
+  
+    $("cluster-table").querySelectorAll("tbody tr").forEach(tr => {  
+      tr.addEventListener("click", () => {  
+        const item = filteredItems().find(x => String(x.id) === String(tr.dataset.id));  
+        if(item){  
+          setSelected(item);  
+          showPage("heatmap");  
+        }  
+      });  
+    });  
+  
+    // Priority page  
+    const tier = $("priority-filter").value || "";  
+    let items = state.clusters.map(normalize).sort((a,b) => b.score - a.score);  
+    if(tier) items = items.filter(p => p.tier === tier);  
+    const pbody = $("priority-table").querySelector("tbody");  
+    if(!items.length){  
+      pbody.innerHTML = `<tr><td colspan="6" class="muted">No priority rows for this filter.</td></tr>`;  
+    }else{  
+      pbody.innerHTML = items.slice(0, 25).map((p, i) => `  
+        <tr data-id="${String(p.id)}">  
+          <td>${i + 1}</td>  
+          <td>${p.name}</td>  
+          <td>${formatNum(p.priority,0)}</td>  
+          <td><span class="badge ${badgeClass(p.tier)}">${p.tier}</span></td>  
+          <td>${formatNum(p.score,0)}</td>  
+          <td>${formatNum(p.violations,0)}</td>  
+        </tr>  
+      `).join("");  
+      pbody.querySelectorAll("tr").forEach(tr => {  
+        tr.addEventListener("click", () => {  
+          const item = items.find(x => String(x.id) === String(tr.dataset.id));  
+          if(item){  
+            setSelected(item);  
+            showPage("overview");  
+          }  
+        });  
+      });  
+    }  
+  
+    // Anomalies page  
+    renderAnomalies();  
+  
+    // Models page  
+    $("summary-box").innerHTML = `  
+      <div class="mini-kpis">  
+        <div class="mini"><div class="l">Total violations</div><div class="v">${formatNum(state.summary?.total_violations,0)}</div><div class="s">all clusters</div></div>  
+        <div class="mini"><div class="l">Clusters</div><div class="v">${formatNum(state.summary?.total_clusters,0)}</div><div class="s">DBSCAN summary</div></div>  
+        <div class="mini"><div class="l">Anomaly days</div><div class="v">${formatNum(state.summary?.anomaly_days,0)}</div><div class="s">IsolationForest</div></div>  
+        <div class="mini"><div class="l">Forecast R²</div><div class="v">${formatNum(state.summary?.forecast_metrics?.R2,3)}</div><div class="s">held-out split</div></div>  
+      </div>  
+      <div class="callout blue" style="margin-top:14px;margin-bottom:0">  
+        <strong>Model reading</strong>  
+        <div class="small">These metrics are pulled from <code>/api/summary</code> and <code>/api/model-info</code>.</div>  
+      </div>  
+    `;  
+    $("model-grid").innerHTML = renderModelRegistryGrid();  
+    renderWeekdayBox();  
+  }  
+  
+  async function refreshAll(){  
+    await loadAll();  
+    renderPageSpecific();  
+  }  
+  
+  function attachEvents(){  
+    document.querySelectorAll(".nav-item").forEach(el => {  
+      el.addEventListener("click", () => showPage(el.dataset.page));  
+    });  
+  
+    document.querySelectorAll(".chip[data-tier]").forEach(el => {  
+      el.addEventListener("click", () => setTier(el.dataset.tier));  
+    });  
+  
+    $("api-input").addEventListener("change", (e) => {  
+      setApi(e.target.value);  
+      refreshAll();  
+    });  
+  
+    $("refresh-btn").addEventListener("click", refreshAll);  
+    $("theme-btn").addEventListener("click", () => setTheme(state.theme === "light" ? "dark" : "light"));  
+    $("reset-view-btn").addEventListener("click", () => {  
+      fitMapToData();  
+      drawMap("map-canvas");  
+    });  
+    $("heat-reset").addEventListener("click", () => {  
+      fitMapToData();  
+      drawMap("map-canvas-2");  
+    });  
+    $("heat-refresh").addEventListener("click", refreshAll);  
+    $("priority-refresh").addEventListener("click", () => { renderPriorityTable(); });  
+    $("anom-refresh").addEventListener("click", () => { renderAnomalies(); renderWeekdayBox(); });  
+    $("models-refresh").addEventListener("click", () => { renderSummaryBox(); renderModels(); });  
+  
+    $("search-input").addEventListener("input", applySortFilter);  
+    $("sort-select").addEventListener("change", applySortFilter);  
+    $("min-score").addEventListener("input", applySortFilter);  
+    $("priority-filter").addEventListener("change", renderPageExtras);  
+  
+    $("zoom-in").addEventListener("click", () => zoom(1.15));  
+    $("zoom-out").addEventListener("click", () => zoom(0.87));  
+  
+    window.addEventListener("resize", () => {  
+      drawMap("map-canvas");  
+      drawMap("map-canvas-2");  
+    });  
+  
+    bindMapInteractions("map-canvas", "tooltip");  
+    bindMapInteractions("map-canvas-2", "tooltip-2");  
+  }  
+  
+  function init(){  
+    const savedTheme = localStorage.getItem("parking_theme");  
+    if(savedTheme === "dark" || savedTheme === "light") state.theme = savedTheme;  
+    setTheme(state.theme);  
+    setApi($("api-input").value);  
+    attachEvents();  
+    refreshAll();  
+  
+    // Auto-switch map canvas to the right page after selection updates.  
+    setInterval(() => {  
+      if(state.page === "overview") drawMap("map-canvas");  
+      if(state.page === "heatmap") drawMap("map-canvas-2");  
+    }, 2500);  
+  }  
+  
+  document.addEventListener("DOMContentLoaded", init);  
+</script>  
+</body>  
 </html>

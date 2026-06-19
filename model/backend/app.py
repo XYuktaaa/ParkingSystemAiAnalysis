@@ -351,6 +351,17 @@ def model_info():
 
     return jsonify(info)
 
+@app.route("/api/dashboard-summary", methods=["GET"])  
+def dashboard_summary():  
+    df_c, _ = _safe_read("cluster_summary")  
+    df_j, _ = _safe_read("junction_impact")  
+    df_a, _ = _safe_read("daily_anomaly")  
+  
+    return jsonify({  
+        "clusters": int(len(df_c)) if df_c is not None else 0,  
+        "junctions": int(len(df_j)) if df_j is not None else 0,  
+        "anomalies": int((df_a["anomaly_flag"] == -1).sum()) if df_a is not None and "anomaly_flag" in df_a.columns else 0,  
+    })
 
 # ── Top-N junctions for map view ─────────────────────────────────────────────
 

@@ -1,813 +1,1160 @@
-import { useState, useEffect, useCallback } from "react";
-
-const API = "http://localhost:8000/api";
-
-// ─── Fetch helper ────────────────────────────────────────────────────────────
-async function apiFetch(path, opts = {}) {
-  try {
-    const res = await fetch(API + path, opts);
-    if (!res.ok) throw new Error(`${res.status}`);
-    return await res.json();
-  } catch (e) {
-    console.error("API error", path, e);
-    return null;
-  }
-}
-
-// ─── Design tokens ───────────────────────────────────────────────────────────
-const TIER_COLOR = {
-  Critical: { bg: "#2D0A0A", border: "#C0392B", text: "#FF6B6B", dot: "#E74C3C" },
-  High:     { bg: "#2D1A00", border: "#C07C00", text: "#FFB347", dot: "#E67E22" },
-  Medium:   { bg: "#0A1A2D", border: "#1A7ABF", text: "#64B5F6", dot: "#2196F3" },
-  Low:      { bg: "#0A2D12", border: "#1A7A3A", text: "#81C784", dot: "#4CAF50"  },
-};
-const TIER_ORDER = ["Critical", "High", "Medium", "Low"];
-
-// ─── Colour constants ─────────────────────────────────────────────────────────
-const C = {
-  bg:       "#0D0F14",
-  surface:  "#13161D",
-  border:   "#1E2330",
-  text:     "#E2E8F0",
-  muted:    "#64748B",
-  accent:   "#3B82F6",
-  accentDim:"#1E3A5F",
-  red:      "#E74C3C",
-  amber:    "#E67E22",
-  green:    "#27AE60",
-};
-
-// ─── Reusable components ─────────────────────────────────────────────────────
-function Card({ children, style = {} }) {
-  return (
-    <div style={{
-      background: C.surface, border: `1px solid ${C.border}`,
-      borderRadius: 10, padding: "16px 18px", ...style
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function Label({ children, style = {} }) {
-  return (
-    <div style={{
-      fontSize: 10, fontWeight: 600, letterSpacing: "0.1em",
-      color: C.muted, textTransform: "uppercase", marginBottom: 6, ...style
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function TierBadge({ tier }) {
-  const t = TIER_COLOR[tier] || TIER_COLOR.Low;
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
-      padding: "2px 8px", borderRadius: 99,
-      background: t.bg, border: `1px solid ${t.border}`, color: t.text,
-    }}>
-      {tier}
-    </span>
-  );
-}
-
-function KPI({ label, value, sub, color }) {
-  return (
-    <Card style={{ textAlign: "center" }}>
-      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: color || C.text, lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>{sub}</div>}
-    </Card>
-  );
-}
-
-function Spinner() {
-  return (
-    <div style={{ color: C.muted, fontSize: 12, padding: "24px 0", textAlign: "center" }}>
-      Loading…
-    </div>
-  );
-}
-
-// ─── Mini bar chart ───────────────────────────────────────────────────────────
-function BarChart({ data, xKey, yKey, color = C.accent, height = 120 }) {
-  if (!data?.length) return null;
-  const max = Math.max(...data.map(d => d[yKey]));
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height }}>
-      {data.map((d, i) => (
-        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div
-            title={`${d[xKey]}: ${d[yKey].toLocaleString()}`}
-            style={{
-              width: "100%", borderRadius: "3px 3px 0 0",
-              background: color,
-              height: `${Math.max(2, (d[yKey] / max) * (height - 20))}px`,
-              cursor: "default", transition: "opacity .15s",
-            }}
-          />
-          {data.length <= 8 && (
-            <div style={{ fontSize: 9, color: C.muted, marginTop: 2, whiteSpace: "nowrap" }}>
-              {d[xKey]}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Heatmap grid ─────────────────────────────────────────────────────────────
-function HeatGrid({ data, rowKey, cols }) {
-  if (!data?.length) return null;
-  const allVals = data.flatMap(r => cols.map(c => Number(r[c] || 0)));
-  const max = Math.max(...allVals, 1);
-
-  function cellColor(val) {
-    const t = val / max;
-    if (t > 0.75) return "#C0392B";
-    if (t > 0.45) return "#E67E22";
-    if (t > 0.20) return "#2196F3";
-    if (t > 0.05) return "#1A3A5F";
-    return "#13161D";
-  }
-
-  return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 11 }}>
-        <thead>
-          <tr>
-            <th style={{ color: C.muted, textAlign: "left", padding: "4px 8px", fontWeight: 400, whiteSpace: "nowrap" }}>
-              Junction
-            </th>
-            {cols.map(c => (
-              <th key={c} style={{ color: C.muted, padding: "4px 6px", fontWeight: 400, whiteSpace: "nowrap" }}>
-                {c}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => (
-            <tr key={i}>
-              <td style={{
-                color: C.text, padding: "5px 8px", whiteSpace: "nowrap",
-                maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis",
-                fontSize: 11,
-              }}>
-                {String(row[rowKey] || "").replace(/^BTP\d+ - /, "")}
-              </td>
-              {cols.map(c => {
-                const v = Number(row[c] || 0);
-                return (
-                  <td key={c} title={`${c}: ${v.toLocaleString()}`} style={{
-                    background: cellColor(v),
-                    color: v > max * 0.2 ? "#fff" : C.muted,
-                    padding: "5px 6px",
-                    textAlign: "center",
-                    fontVariantNumeric: "tabular-nums",
-                    borderRadius: 3,
-                  }}>
-                    {v > 0 ? v.toLocaleString() : "—"}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ─── Map placeholder (Folium link) ───────────────────────────────────────────
-function MapPanel({ hotspots }) {
-  if (!hotspots?.length) return <Spinner />;
-  const tiers = { Critical: 0, High: 0, Medium: 0, Low: 0 };
-  hotspots.forEach(h => { if (tiers[h.risk_tier] !== undefined) tiers[h.risk_tier]++; });
-
-  return (
-    <div>
-      <div style={{
-        background: "#0A1520", borderRadius: 8, padding: 16,
-        border: `1px solid ${C.border}`, marginBottom: 12,
-        fontSize: 12, color: C.muted, textAlign: "center",
-      }}>
-        <div style={{ marginBottom: 8, color: C.text, fontWeight: 600 }}>
-          Interactive Map
-        </div>
-        Open <code style={{ color: C.accent }}>models/02_interactive_heatmap.html</code> in
-        your browser for the full Folium heatmap, or embed it below via iframe after running
-        the pipeline.
-        <div style={{ marginTop: 8 }}>
-          <a
-            href="./models/02_interactive_heatmap.html"
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              color: C.accent, fontSize: 12,
-              background: C.accentDim, padding: "5px 14px",
-              borderRadius: 6, textDecoration: "none", display: "inline-block",
-            }}
-          >
-            Open Heatmap →
-          </a>
-        </div>
-      </div>
-
-      {/* Cluster summary list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {hotspots.slice(0, 12).map((h, i) => (
-          <div key={i} style={{
-            display: "flex", alignItems: "center", gap: 10,
-            background: C.bg, borderRadius: 6, padding: "7px 10px",
-            border: `1px solid ${TIER_COLOR[h.risk_tier]?.border || C.border}`,
-          }}>
-            <div style={{
-              width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-              background: TIER_COLOR[h.risk_tier]?.dot || C.muted,
-            }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {String(h.top_junction || "Cluster " + (i + 1)).replace(/^BTP\d+ - /, "")}
-              </div>
-              <div style={{ fontSize: 10, color: C.muted }}>
-                {h.centroid_lat?.toFixed(4)}, {h.centroid_lon?.toFixed(4)}
-              </div>
-            </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: TIER_COLOR[h.risk_tier]?.text || C.text }}>
-                {h.congestion_score?.toLocaleString()}
-              </div>
-              <div style={{ fontSize: 10, color: C.muted }}>score</div>
-            </div>
-            <TierBadge tier={h.risk_tier} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Live inference panel ────────────────────────────────────────────────────
-function InferencePanel() {
-  const [tab, setTab] = useState("severity");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-
-  const [sevInput, setSevInput] = useState({
-    total_violations: 8000, main_road_pct: 0.2, double_park_pct: 0.05,
-    footpath_pct: 0.03, morning_peak_pct: 0.3, evening_peak_pct: 0.25,
-    weekend_pct: 0.2, unique_vehicle_types: 5, approved_pct: 0.7,
-    avg_lat: 12.972, avg_lon: 77.577,
-  });
-
-  const [zoneInput, setZoneInput] = useState({ lat: 12.972, lon: 77.577 });
-  const [anomInput, setAnoInput] = useState({ daily_count: 800, daily_congestion: 2400, main_road_frac: 0.35, z_score: 3.5 });
-  const [fcastInput, setFcastInput] = useState({ lag1: 120, lag2: 110, lag7: 95, roll3_mean: 108, roll7_mean: 105, dow: 1, month: 3 });
-
-  async function runInference() {
-    setLoading(true); setResult(null);
-    let res;
-    if (tab === "severity")  res = await apiFetch("/predict/severity",  { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(sevInput) });
-    if (tab === "tier")      res = await apiFetch("/predict/tier",      { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(sevInput) });
-    if (tab === "zone")      res = await apiFetch("/predict/zone",      { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(zoneInput) });
-    if (tab === "anomaly")   res = await apiFetch("/predict/anomaly",   { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(anomInput) });
-    if (tab === "forecast")  res = await apiFetch("/predict/forecast",  { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(fcastInput) });
-    setResult(res); setLoading(false);
-  }
-
-  const inputStyle = {
-    background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5,
-    color: C.text, fontSize: 12, padding: "5px 8px", width: "100%",
-  };
-  const rowStyle = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 };
-
-  return (
-    <Card>
-      <Label>Live Inference — Call Trained Models</Label>
-      <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
-        {["severity","tier","zone","anomaly","forecast"].map(t => (
-          <button key={t} onClick={() => { setTab(t); setResult(null); }} style={{
-            padding: "4px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer",
-            border: `1px solid ${tab === t ? C.accent : C.border}`,
-            background: tab === t ? C.accentDim : C.bg,
-            color: tab === t ? C.accent : C.muted,
-          }}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {(tab === "severity" || tab === "tier") && (
-        <div>
-          <div style={rowStyle}>
-            {["total_violations","main_road_pct","double_park_pct","morning_peak_pct"].map(k => (
-              <div key={k}>
-                <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{k.replace(/_/g," ")}</div>
-                <input type="number" style={inputStyle} value={sevInput[k]}
-                  onChange={e => setSevInput({...sevInput, [k]: parseFloat(e.target.value)})} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {tab === "zone" && (
-        <div style={rowStyle}>
-          {["lat","lon"].map(k => (
-            <div key={k}>
-              <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{k === "lat" ? "Latitude" : "Longitude"}</div>
-              <input type="number" step="0.001" style={inputStyle} value={zoneInput[k]}
-                onChange={e => setZoneInput({...zoneInput, [k]: parseFloat(e.target.value)})} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {tab === "anomaly" && (
-        <div style={rowStyle}>
-          {Object.keys(anomInput).map(k => (
-            <div key={k}>
-              <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{k.replace(/_/g," ")}</div>
-              <input type="number" step="0.01" style={inputStyle} value={anomInput[k]}
-                onChange={e => setAnoInput({...anomInput, [k]: parseFloat(e.target.value)})} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {tab === "forecast" && (
-        <div style={rowStyle}>
-          {Object.keys(fcastInput).map(k => (
-            <div key={k}>
-              <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{k.replace(/_/g," ")}</div>
-              <input type="number" style={inputStyle} value={fcastInput[k]}
-                onChange={e => setFcastInput({...fcastInput, [k]: parseFloat(e.target.value)})} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      <button onClick={runInference} disabled={loading} style={{
-        marginTop: 4, padding: "7px 20px", borderRadius: 6, cursor: loading ? "wait" : "pointer",
-        background: C.accent, border: "none", color: "#fff", fontWeight: 600, fontSize: 12,
-      }}>
-        {loading ? "Running…" : "Run Inference →"}
-      </button>
-
-      {result && (
-        <div style={{
-          marginTop: 12, background: C.bg, borderRadius: 6, padding: 12,
-          border: `1px solid ${C.border}`, fontFamily: "monospace", fontSize: 11, color: C.text,
-        }}>
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{JSON.stringify(result, null, 2)}</pre>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ─── Priority grid panel ─────────────────────────────────────────────────────
-function PriorityGrid({ data }) {
-  if (!data?.length) return <Spinner />;
-  const SLOT_COLS = ["00-04","04-08","08-12","12-16","16-20","20-24"];
-  const present = SLOT_COLS.filter(c => c in data[0]);
-  return <HeatGrid data={data} rowKey="junction_clean" cols={present.length ? present : SLOT_COLS} />;
-}
-
-// ─── Patrol zones panel ───────────────────────────────────────────────────────
-function PatrolZones({ zones }) {
-  if (!zones?.length) return <Spinner />;
-  const max = Math.max(...zones.map(z => z.congestion_load || 0), 1);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {zones.map((z, i) => (
-        <div key={i} style={{
-          display: "flex", alignItems: "center", gap: 10,
-          background: C.bg, borderRadius: 6, padding: "8px 10px",
-          border: `1px solid ${C.border}`,
-        }}>
-          <div style={{
-            width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
-            background: C.accentDim, border: `2px solid ${C.accent}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 11, fontWeight: 700, color: C.accent,
-          }}>
-            #{z.priority_rank}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: C.text }}>
-                Zone {z.patrol_zone}
-              </span>
-              <span style={{ fontSize: 10, color: C.muted }}>
-                peak {z.peak_hour}:00h · {z.total_violations?.toLocaleString()} violations
-              </span>
-            </div>
-            <div style={{
-              height: 5, borderRadius: 3, background: C.border,
-              overflow: "hidden",
-            }}>
-              <div style={{
-                width: `${(z.congestion_load / max) * 100}%`,
-                height: "100%", background: i < 3 ? C.red : i < 5 ? C.amber : C.accent,
-                borderRadius: 3, transition: "width .4s",
-              }} />
-            </div>
-          </div>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>
-              {z.congestion_load?.toLocaleString()}
-            </div>
-            <div style={{ fontSize: 9, color: C.muted }}>load</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Anomaly panel ───────────────────────────────────────────────────────────
-function AnomalyPanel({ anomalies }) {
-  if (!anomalies?.length) return <Spinner />;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      {anomalies.slice(0, 10).map((a, i) => (
-        <div key={i} style={{
-          display: "flex", alignItems: "center", gap: 8,
-          background: C.bg, borderRadius: 6, padding: "7px 10px",
-          border: `1px solid ${C.border}`,
-        }}>
-          <div style={{ fontSize: 18, flexShrink: 0 }}>⚠️</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: C.text }}>
-              {String(a.junction_clean).replace(/^BTP\d+ - /, "")}
-            </div>
-            <div style={{ fontSize: 10, color: C.muted }}>
-              {a.date} · {a.daily_count?.toLocaleString()} violations · z={Number(a.z_score || 0).toFixed(2)}
-            </div>
-          </div>
-          <div style={{
-            fontSize: 11, fontWeight: 700,
-            color: (a.anomaly_score || 0) < -0.22 ? C.red : C.amber,
-          }}>
-            {Number(a.anomaly_score || 0).toFixed(3)}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Main App ─────────────────────────────────────────────────────────────────
-export default function App() {
-  const [tab, setTab] = useState("overview");
-  const [stats, setStats]       = useState(null);
-  const [hotspots, setHotspots] = useState(null);
-  const [grid, setGrid]         = useState(null);
-  const [zones, setZones]       = useState(null);
-  const [temporal, setTemporal] = useState(null);
-  const [anomalies, setAnomalies] = useState(null);
-  const [apiOk, setApiOk] = useState(null);
-
-  const fetchAll = useCallback(async () => {
-    const health = await apiFetch("/health");
-    setApiOk(!!health);
-    const [s, h, g, z, t, a] = await Promise.all([
-      apiFetch("/stats"),
-      apiFetch("/hotspots?limit=50"),
-      apiFetch("/priority-grid?limit=15"),
-      apiFetch("/patrol-zones"),
-      apiFetch("/temporal"),
-      apiFetch("/anomalies?limit=20"),
-    ]);
-    if (s) setStats(s);
-    if (h) setHotspots(h.hotspots);
-    if (g) setGrid(g.grid);
-    if (z) setZones(z.zones);
-    if (t) setTemporal(t);
-    if (a) setAnomalies(a.anomalies);
-  }, []);
-
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  const TABS = [
-    { id: "overview",  label: "Overview"   },
-    { id: "hotspots",  label: "Hotspots"   },
-    { id: "priority",  label: "Priority Grid" },
-    { id: "patrol",    label: "Patrol Zones" },
-    { id: "anomalies", label: "Anomalies"  },
-    { id: "inference", label: "Live Inference" },
-  ];
-
-  const s = { fontSize: 13, color: C.text, fontFamily: "'Inter', system-ui, sans-serif" };
-
-  const hourData = temporal?.hourly?.map(r => ({
-    x: `${String(r.hour).padStart(2,"0")}h`,
-    y: r.total || 0,
-  })) || [];
-
-  const dowData = temporal?.dow?.map(r => ({
-    x: r.day_name || r.dow,
-    y: r.total || 0,
-  })) || [];
-
-  return (
-    <div style={{
-      minHeight: "100vh", background: C.bg, color: C.text,
-      fontFamily: "'Inter', system-ui, sans-serif", fontSize: 13,
-    }}>
-      {/* Header */}
-      <div style={{
-        background: C.surface, borderBottom: `1px solid ${C.border}`,
-        padding: "0 24px", display: "flex", alignItems: "center",
-        justifyContent: "space-between", height: 52,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 18 }}>🚔</span>
-          <span style={{ fontWeight: 700, fontSize: 15, color: C.text }}>
-            Parking Intelligence
-          </span>
-          <span style={{
-            fontSize: 10, color: C.muted, background: C.bg,
-            padding: "2px 8px", borderRadius: 99, border: `1px solid ${C.border}`,
-          }}>
-            Bengaluru · 2023–24
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 7, height: 7, borderRadius: "50%",
-            background: apiOk === null ? C.amber : apiOk ? C.green : C.red,
-          }} />
-          <span style={{ fontSize: 10, color: C.muted }}>
-            {apiOk === null ? "Connecting…" : apiOk ? "API connected" : "API offline — run backend"}
-          </span>
-          <button onClick={fetchAll} style={{
-            background: C.accentDim, border: `1px solid ${C.accent}`,
-            color: C.accent, borderRadius: 6, padding: "4px 12px",
-            fontSize: 11, cursor: "pointer", fontWeight: 600,
-          }}>
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Tab bar */}
-      <div style={{
-        background: C.surface, borderBottom: `1px solid ${C.border}`,
-        padding: "0 24px", display: "flex", gap: 0,
-      }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            background: "none", border: "none",
-            borderBottom: `2px solid ${tab === t.id ? C.accent : "transparent"}`,
-            color: tab === t.id ? C.accent : C.muted,
-            padding: "10px 14px", fontSize: 12, fontWeight: tab === t.id ? 600 : 400,
-            cursor: "pointer", transition: "all .15s",
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Body */}
-      <div style={{ padding: 20, maxWidth: 1300, margin: "0 auto" }}>
-
-        {/* ── OVERVIEW ── */}
-        {tab === "overview" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* KPI row */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-              <KPI label="Total Violations" value={stats ? stats.total_violations.toLocaleString() : "—"} color={C.text} />
-              <KPI label="Critical Junctions" value={stats?.n_critical ?? "—"} color={C.red} sub="severity_tier = Critical" />
-              <KPI label="DBSCAN Clusters" value={stats?.n_clusters ?? "—"} color={C.amber} sub="hotspot zones" />
-              <KPI label="Top Junction Score" value={stats ? stats.top_congestion_score.toLocaleString() : "—"} color={C.accent} sub={stats?.top_junction?.replace(/^BTP\d+ - /,"").slice(0,24)} />
-            </div>
-
-            {/* Temporal charts */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <Card>
-                <Label>Violations by Hour of Day</Label>
-                <BarChart
-                  data={hourData}
-                  xKey="x" yKey="y"
-                  color={C.accent} height={130}
-                />
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 6 }}>
-                  Note: 04–06h peak reflects patrol shift patterns, not true violation density.
-                </div>
-              </Card>
-              <Card>
-                <Label>Violations by Day of Week</Label>
-                <BarChart data={dowData} xKey="x" yKey="y" color={C.amber} height={130} />
-              </Card>
-            </div>
-
-            {/* Top junctions */}
-            <Card>
-              <Label>Top 10 Junctions by Congestion Score</Label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                {(grid || []).slice(0, 10).map((j, i) => {
-                  const score = j.total_score || j.congestion_score || 0;
-                  const maxScore = (grid?.[0]?.total_score || grid?.[0]?.congestion_score || 1);
-                  const name = String(j.junction_clean || "").replace(/^BTP\d+ - /, "");
-                  const tier = score > 8000 ? "Critical" : score > 3000 ? "High" : score > 1000 ? "Medium" : "Low";
-                  return (
-                    <div key={i} style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "6px 0",
-                      borderBottom: i < 9 ? `1px solid ${C.border}` : "none",
-                    }}>
-                      <span style={{ fontSize: 10, color: C.muted, width: 20, textAlign: "right" }}>
-                        #{i + 1}
-                      </span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                          <span style={{ fontSize: 12, color: C.text }}>{name.slice(0, 45)}</span>
-                          <TierBadge tier={tier} />
-                        </div>
-                        <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: "hidden" }}>
-                          <div style={{
-                            width: `${(score / maxScore) * 100}%`,
-                            height: "100%",
-                            background: TIER_COLOR[tier]?.dot || C.accent,
-                            borderRadius: 2,
-                          }} />
-                        </div>
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: C.text, minWidth: 60, textAlign: "right" }}>
-                        {Number(score).toLocaleString()}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* ── HOTSPOTS ── */}
-        {tab === "hotspots" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
-            <Card>
-              <Label>DBSCAN Cluster Map</Label>
-              <MapPanel hotspots={hotspots} />
-            </Card>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <Card>
-                <Label>Cluster tier distribution</Label>
-                {hotspots ? (() => {
-                  const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
-                  hotspots.forEach(h => { if (counts[h.risk_tier] !== undefined) counts[h.risk_tier]++; });
-                  const total = hotspots.length;
-                  return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {TIER_ORDER.map(t => (
-                        <div key={t} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ width: 60, fontSize: 11, color: TIER_COLOR[t].text }}>{t}</span>
-                          <div style={{ flex: 1, height: 8, background: C.border, borderRadius: 4, overflow: "hidden" }}>
-                            <div style={{
-                              width: `${(counts[t] / total) * 100}%`,
-                              height: "100%", background: TIER_COLOR[t].dot, borderRadius: 4,
-                            }} />
-                          </div>
-                          <span style={{ fontSize: 11, color: C.muted, width: 30, textAlign: "right" }}>{counts[t]}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })() : <Spinner />}
-              </Card>
-              <Card>
-                <Label>Model performance</Label>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {[
-                    ["Severity model R²",    "0.959"],
-                    ["Severity model MAE",   "294 congestion units"],
-                    ["Tier classifier CV",   "97.6% accuracy"],
-                    ["Forecaster MAE",       "10.8 violations/day"],
-                    ["Forecaster R²",        "0.948"],
-                    ["Validation F1",        "0.634 (imbalanced)"],
-                    ["K-Means silhouette",   "0.50"],
-                    ["Anomaly contamination","5.0%"],
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${C.border}`, paddingBottom: 5 }}>
-                      <span style={{ fontSize: 11, color: C.muted }}>{k}</span>
-                      <span style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{v}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* ── PRIORITY GRID ── */}
-        {tab === "priority" && (
-          <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-              <div>
-                <Label>Enforcement Priority Matrix — Junction × Time Slot</Label>
-                <div style={{ fontSize: 11, color: C.muted }}>
-                  Congestion-weighted violation score per 4-hour patrol window. Red = highest urgency.
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, fontSize: 10 }}>
-                {[["#C0392B","Critical"], ["#E67E22","High"], ["#2196F3","Medium"]].map(([c, l]) => (
-                  <div key={l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <div style={{ width: 10, height: 10, background: c, borderRadius: 2 }} />
-                    <span style={{ color: C.muted }}>{l}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <PriorityGrid data={grid} />
-          </Card>
-        )}
-
-        {/* ── PATROL ZONES ── */}
-        {tab === "patrol" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
-            <Card>
-              <Label>K-Means Patrol Zone Assignments (priority ranked)</Label>
-              <PatrolZones zones={zones} />
-            </Card>
-            <Card>
-              <Label>Zone deployment guide</Label>
-              <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.8 }}>
-                <p style={{ marginBottom: 10 }}>
-                  Each zone is sized by congestion load, not geography. Deploy officers to zones in priority order.
-                </p>
-                {(zones || []).slice(0, 5).map((z, i) => (
-                  <div key={i} style={{
-                    background: C.bg, borderRadius: 6, padding: "8px 10px",
-                    marginBottom: 6, border: `1px solid ${C.border}`,
-                  }}>
-                    <div style={{ fontWeight: 600, color: C.text, marginBottom: 3 }}>
-                      Zone {z.patrol_zone} — Priority #{z.priority_rank}
-                    </div>
-                    <div>Centroid: {Number(z.centroid_lat).toFixed(4)}, {Number(z.centroid_lon).toFixed(4)}</div>
-                    <div>Peak hour: {z.peak_hour}:00 · Load: {Number(z.congestion_load).toLocaleString()}</div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* ── ANOMALIES ── */}
-        {tab === "anomalies" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <Card>
-              <Label>Isolation Forest — Flagged Anomalous Days</Label>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
-                Days where violation count was statistically anomalous vs. 7-day rolling baseline.
-              </div>
-              <AnomalyPanel anomalies={anomalies} />
-            </Card>
-            <Card>
-              <Label>Anomaly interpretation</Label>
-              <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.8 }}>
-                <div style={{ marginBottom: 10 }}>
-                  The Isolation Forest flags junction-days where the combination of
-                  daily count, congestion, main-road fraction, and z-score deviates
-                  significantly from baseline.
-                </div>
-                <div style={{ background: C.bg, borderRadius: 6, padding: "10px 12px", marginBottom: 8 }}>
-                  <div style={{ fontWeight: 600, color: C.text, marginBottom: 4 }}>Score interpretation</div>
-                  <div>Below −0.22 → High anomaly (event / spike)</div>
-                  <div>−0.22 to −0.18 → Medium anomaly</div>
-                  <div>Above −0.18 → Normal variation</div>
-                </div>
-                <div style={{ background: C.bg, borderRadius: 6, padding: "10px 12px" }}>
-                  <div style={{ fontWeight: 600, color: C.text, marginBottom: 4 }}>Why "No Junction" dominates</div>
-                  <div>
-                    Violations without named junctions aggregate into a single bucket, making its
-                    daily counts higher and more variable than any individual named junction.
-                    Treat those dates as city-wide event indicators.
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* ── INFERENCE ── */}
-        {tab === "inference" && (
-          <div style={{ maxWidth: 680 }}>
-            <InferencePanel />
-            <div style={{ marginTop: 12, fontSize: 11, color: C.muted }}>
-              All inputs use default values matching a typical high-risk junction.
-              Adjust sliders and re-run to explore model behaviour.
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
-}
+// dashboard/src/App.jsx  
+import { useCallback, useEffect, useMemo, useState } from "react";  
+  
+const API = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000/api";  
+const MAP_HTML = "./models/02_interactive_heatmap.html";  
+  
+const NAV_ITEMS = [  
+  ["overview", "Overview"],  
+  ["heatmap", "Heatmap"],  
+  ["priority", "Priority"],  
+  ["anomalies", "Anomalies"],  
+  ["models", "Models"],  
+];  
+  
+const TIER_ORDER = ["All", "Critical", "High", "Medium", "Low"];  
+  
+const TIER_COLOR = {  
+  Critical: { bg: "#FFF1F1", border: "#F3B0B0", text: "#B42318", dot: "#EF4444" },  
+  High:     { bg: "#FFF7ED", border: "#F7C58B", text: "#A85500", dot: "#F97316" },  
+  Medium:   { bg: "#EEF6FF", border: "#A9CCF7", text: "#2C6CB3", dot: "#3B82F6" },  
+  Low:      { bg: "#ECFDF3", border: "#A7E3B0", text: "#23764A", dot: "#22C55E" },  
+};  
+  
+const THEMES = {  
+  light: {  
+    page: "#F4FAFF",  
+    page2: "#ECF5FF",  
+    surface: "#FFFFFF",  
+    surface2: "#F8FBFF",  
+    border: "#D7E6F4",  
+    border2: "#B9D7F2",  
+    text: "#0B1B2B",  
+    muted: "#60738A",  
+    muted2: "#7F93A8",  
+    accent: "#2F7DFF",  
+    accent2: "#66B8FF",  
+    accentSoft: "#E7F3FF",  
+    deep: "#0D2340",  
+    deep2: "#102B4A",  
+    shadow: "0 14px 38px rgba(47, 125, 255, 0.10)",  
+    hero: "linear-gradient(135deg, #EAF6FF 0%, #D8ECFF 100%)",  
+  },  
+  dark: {  
+    page: "#06111F",  
+    page2: "#091628",  
+    surface: "#0B1728",  
+    surface2: "#10263D",  
+    border: "#20374F",  
+    border2: "#2C4D6D",  
+    text: "#EAF2FF",  
+    muted: "#8EA6BE",  
+    muted2: "#A9BFD5",  
+    accent: "#66B8FF",  
+    accent2: "#9AD9FF",  
+    accentSoft: "#102B48",  
+    deep: "#081423",  
+    deep2: "#0D2340",  
+    shadow: "0 18px 46px rgba(0, 0, 0, 0.34)",  
+    hero: "linear-gradient(135deg, #0D2340 0%, #102B4A 100%)",  
+  },  
+};  
+  
+async function apiFetch(path, opts = {}) {  
+  try {  
+    const res = await fetch(API + path, opts);  
+    if (!res.ok) throw new Error(`${res.status}`);  
+    return await res.json();  
+  } catch (e) {  
+    console.error("API error", path, e);  
+    return null;  
+  }  
+}  
+  
+function pickList(payload, keys = ["data", "rows", "hotspots", "clusters", "grid", "priority", "anomalies"]) {  
+  if (!payload) return [];  
+  if (Array.isArray(payload)) return payload;  
+  for (const key of keys) {  
+    if (Array.isArray(payload[key])) return payload[key];  
+  }  
+  return [];  
+}  
+  
+function toNum(v) {  
+  const n = Number(v);  
+  return Number.isFinite(n) ? n : 0;  
+}  
+  
+function formatNumber(v) {  
+  const n = Number(v);  
+  if (!Number.isFinite(n)) return "—";  
+  return new Intl.NumberFormat("en-IN").format(n);  
+}  
+  
+function formatFloat(v, digits = 2) {  
+  const n = Number(v);  
+  if (!Number.isFinite(n)) return "—";  
+  return n.toFixed(digits);  
+}  
+  
+function cleanName(v) {  
+  const s = String(v ?? "").replace(/^BTP\d+\s*-\s*/i, "").trim();  
+  return s || "Unnamed";  
+}  
+  
+function scoreOf(row = {}) {  
+  return toNum(  
+    row.congestion_score ??  
+      row.congestion_rank_score ??  
+      row.priority_score ??  
+      row.total_score ??  
+      row.score ??  
+      row.value  
+  );  
+}  
+  
+function tierOf(row = {}) {  
+  const explicit = row.risk_tier ?? row.risk_level;  
+  if (explicit && TIER_COLOR[explicit]) return explicit;  
+  const score = scoreOf(row);  
+  if (score >= 8000) return "Critical";  
+  if (score >= 3000) return "High";  
+  if (score >= 1000) return "Medium";  
+  return "Low";  
+}  
+  
+function normalizeHotspot(row = {}, idx = 0) {  
+  const lat = toNum(row.avg_lat ?? row.centroid_lat ?? row.latitude);  
+  const lon = toNum(row.avg_lon ?? row.centroid_lon ?? row.longitude);  
+  const score = scoreOf(row);  
+  return {  
+    id: row.cluster_id ?? row.id ?? row.junction_clean ?? idx,  
+    label: cleanName(row.top_junction ?? row.junction_clean ?? row.label ?? `Hotspot ${idx + 1}`),  
+    score,  
+    violations: toNum(row.total_violations ?? row.violation_count ?? row.violations),  
+    priority: toNum(row.priority_score ?? score),  
+    tier: tierOf(row),  
+    risk_level: row.risk_level ?? tierOf(row),  
+    lat,  
+    lon,  
+    raw: row,  
+  };  
+}  
+  
+function normalizeAnomaly(row = {}, idx = 0) {  
+  const label =  
+    row.date ??  
+    row.day ??  
+    row.created_dt ??  
+    row.timestamp ??  
+    row.label ??  
+    `Anomaly ${idx + 1}`;  
+  const score = toNum(row.anomaly_score ?? row.score ?? row.value);  
+  const flag = row.anomaly_flag ?? row.flag ?? (score < 0 ? -1 : 1);  
+  return {  
+    id: row.id ?? row.date ?? row.day ?? idx,  
+    label: String(label),  
+    score,  
+    flag,  
+    raw: row,  
+  };  
+}  
+  
+function themeUi(theme) {  
+  return THEMES[theme] ?? THEMES.light;  
+}  
+  
+function Card({ theme, style = {}, children }) {  
+  const ui = themeUi(theme);  
+  return (  
+    <div  
+      style={{  
+        background: ui.surface,  
+        border: `1px solid ${ui.border}`,  
+        borderRadius: 20,  
+        boxShadow: ui.shadow,  
+        ...style,  
+      }}  
+    >  
+      {children}  
+    </div>  
+  );  
+}  
+  
+function SectionTitle({ theme, title, subtitle, action }) {  
+  const ui = themeUi(theme);  
+  return (  
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>  
+      <div>  
+        <div style={{ fontSize: 18, fontWeight: 900, color: ui.text }}>{title}</div>  
+        {subtitle ? <div style={{ fontSize: 12, color: ui.muted, marginTop: 4 }}>{subtitle}</div> : null}  
+      </div>  
+      {action}  
+    </div>  
+  );  
+}  
+  
+function KPI({ theme, label, value, sub, tone = "accent" }) {  
+  const ui = themeUi(theme);  
+  const color = tone === "red" ? "#EF4444" : tone === "orange" ? "#F97316" : tone === "green" ? "#22C55E" : ui.accent;  
+  return (  
+    <Card theme={theme} style={{ padding: 14 }}>  
+      <div style={{ fontSize: 11, color: ui.muted, marginBottom: 8 }}>{label}</div>  
+      <div style={{ fontSize: 23, fontWeight: 900, color }}>{value}</div>  
+      {sub ? <div style={{ fontSize: 11, color: ui.muted, marginTop: 4 }}>{sub}</div> : null}  
+    </Card>  
+  );  
+}  
+  
+function TierBadge({ theme, tier }) {  
+  const ui = themeUi(theme);  
+  const color = TIER_COLOR[tier] ?? { bg: ui.accentSoft, border: ui.border, text: ui.text, dot: ui.accent };  
+  return (  
+    <span  
+      style={{  
+        display: "inline-flex",  
+        alignItems: "center",  
+        gap: 6,  
+        padding: "5px 10px",  
+        borderRadius: 999,  
+        background: color.bg,  
+        border: `1px solid ${color.border}`,  
+        color: color.text,  
+        fontSize: 11,  
+        fontWeight: 800,  
+        whiteSpace: "nowrap",  
+      }}  
+    >  
+      <span style={{ width: 7, height: 7, borderRadius: "50%", background: color.dot, display: "inline-block" }} />  
+      {tier}  
+    </span>  
+  );  
+}  
+  
+function Spinner({ theme }) {  
+  const ui = themeUi(theme);  
+  return (  
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: 24, color: ui.muted }}>  
+      Loading…  
+    </div>  
+  );  
+}  
+  
+function EmptyState({ theme, title, text }) {  
+  const ui = themeUi(theme);  
+  return (  
+    <div  
+      style={{  
+        padding: 18,  
+        borderRadius: 16,  
+        border: `1px dashed ${ui.border2}`,  
+        background: ui.accentSoft,  
+        color: ui.text,  
+      }}  
+    >  
+      <div style={{ fontWeight: 800, marginBottom: 6 }}>{title}</div>  
+      <div style={{ fontSize: 12, color: ui.muted, lineHeight: 1.7 }}>{text}</div>  
+    </div>  
+  );  
+}  
+  
+function RankedList({ theme, rows, activeId, onSelect, metricLabel = "Score", emptyText = "No data." }) {  
+  const ui = themeUi(theme);  
+  const max = Math.max(...rows.map((r) => r.score || 0), 1);  
+  
+  if (!rows?.length) {  
+    return <EmptyState theme={theme} title="Nothing to show" text={emptyText} />;  
+  }  
+  
+  return (  
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>  
+      {rows.map((row, idx) => {  
+        const active = String(activeId ?? "") === String(row.id ?? "");  
+        const tier = row.tier;  
+        return (  
+          <button  
+            key={String(row.id ?? idx)}  
+            type="button"  
+            onClick={() => onSelect?.(row)}  
+            style={{  
+              width: "100%",  
+              border: `1px solid ${active ? ui.accent : ui.border}`,  
+              background: active ? ui.accentSoft : ui.surface2,  
+              borderRadius: 14,  
+              padding: "10px 12px",  
+              textAlign: "left",  
+              cursor: "pointer",  
+              color: ui.text,  
+            }}  
+          >  
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>  
+              <div  
+                style={{  
+                  width: 26,  
+                  height: 26,  
+                  borderRadius: 999,  
+                  background: TIER_COLOR[tier]?.bg ?? ui.accentSoft,  
+                  border: `1px solid ${TIER_COLOR[tier]?.border ?? ui.border}`,  
+                  display: "flex",  
+                  alignItems: "center",  
+                  justifyContent: "center",  
+                  fontSize: 11,  
+                  fontWeight: 900,  
+                  color: TIER_COLOR[tier]?.text ?? ui.text,  
+                  flex: "0 0 auto",  
+                }}  
+              >  
+                {idx + 1}  
+              </div>  
+              <div style={{ flex: 1, minWidth: 0 }}>  
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>  
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: ui.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>  
+                    {row.label}  
+                  </div>  
+                  <TierBadge theme={theme} tier={tier} />  
+                </div>  
+                <div style={{ height: 5, background: ui.border, borderRadius: 999, overflow: "hidden" }}>  
+                  <div  
+                    style={{  
+                      width: `${Math.max(4, (row.score / max) * 100)}%`,  
+                      height: "100%",  
+                      background: TIER_COLOR[tier]?.dot ?? ui.accent,  
+                      borderRadius: 999,  
+                    }}  
+                  />  
+                </div>  
+              </div>  
+              <div style={{ minWidth: 72, textAlign: "right" }}>  
+                <div style={{ fontSize: 12.5, fontWeight: 900, color: ui.text }}>{formatNumber(row.score)}</div>  
+                <div style={{ fontSize: 10, color: ui.muted }}>{metricLabel}</div>  
+              </div>  
+            </div>  
+          </button>  
+        );  
+      })}  
+    </div>  
+  );  
+}  
+  
+function HeatmapHero({  
+  theme,  
+  allRows,  
+  visibleRows,  
+  selected,  
+  onSelect,  
+  selectedTier,  
+  setSelectedTier,  
+  search,  
+  setSearch,  
+  apiOk,  
+}) {  
+  const ui = themeUi(theme);  
+  const counts = useMemo(() => {  
+    const out = { All: allRows.length, Critical: 0, High: 0, Medium: 0, Low: 0 };  
+    allRows.forEach((r) => {  
+      if (out[r.tier] !== undefined) out[r.tier] += 1;  
+    });  
+    return out;  
+  }, [allRows]);  
+  
+  const topRows = visibleRows.slice(0, 8);  
+  const selectedRow = selected ?? visibleRows[0] ?? allRows[0];  
+  
+  return (  
+    <Card theme={theme} style={{ overflow: "hidden" }}>  
+      <div  
+        style={{  
+          padding: 18,  
+          background: ui.hero,  
+          borderBottom: `1px solid ${ui.border}`,  
+        }}  
+      >  
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "center" }}>  
+          <div>  
+            <div style={{ fontSize: 24, fontWeight: 950, color: ui.text }}>Bengaluru Parking Heatmap</div>  
+            <div style={{ fontSize: 12, color: ui.muted, marginTop: 4 }}>  
+              Interactive map-first view of illegal parking hotspots and congestion impact.  
+            </div>  
+          </div>  
+  
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>  
+            {TIER_ORDER.map((tier) => (  
+              <button  
+                key={tier}  
+                type="button"  
+                onClick={() => setSelectedTier?.(tier)}  
+                style={{  
+                  border: `1px solid ${selectedTier === tier ? ui.accent : ui.border}`,  
+                  background: selectedTier === tier ? ui.accentSoft : ui.surface,  
+                  color: selectedTier === tier ? ui.accent : ui.muted,  
+                  borderRadius: 999,  
+                  padding: "8px 12px",  
+                  fontSize: 11,  
+                  fontWeight: 900,  
+                  cursor: "pointer",  
+                }}  
+              >  
+                {tier}  
+                {tier !== "All" ? ` (${counts[tier] || 0})` : ""}  
+              </button>  
+            ))}  
+          </div>  
+        </div>  
+  
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14, alignItems: "center" }}>  
+          <input  
+            value={search}  
+            onChange={(e) => setSearch?.(e.target.value)}  
+            placeholder="Search junction / cluster"  
+            style={{  
+              minWidth: 240,  
+              flex: "1 1 240px",  
+              borderRadius: 12,  
+              border: `1px solid ${ui.border}`,  
+              background: ui.surface,  
+              color: ui.text,  
+              padding: "10px 12px",  
+              outline: "none",  
+            }}  
+          />  
+          <a  
+            href={MAP_HTML}  
+            target="_blank"  
+            rel="noreferrer"  
+            style={{  
+              display: "inline-flex",  
+              alignItems: "center",  
+              justifyContent: "center",  
+              textDecoration: "none",  
+              borderRadius: 12,  
+              padding: "10px 14px",  
+              background: ui.accent,  
+              color: "#fff",  
+              fontSize: 12,  
+              fontWeight: 900,  
+              border: "none",  
+            }}  
+          >  
+            Open full heatmap  
+          </a>  
+          <span  
+            style={{  
+              display: "inline-flex",  
+              alignItems: "center",  
+              gap: 8,  
+              borderRadius: 999,  
+              padding: "8px 12px",  
+              background: apiOk ? "#EAFBF1" : "#FFF1F1",  
+              color: apiOk ? "#1F7A4D" : "#B42318",  
+              border: `1px solid ${apiOk ? "#B7E7C8" : "#F3B0B0"}`,  
+              fontSize: 11,  
+              fontWeight: 800,  
+            }}  
+          >  
+            <span  
+              style={{  
+                width: 8,  
+                height: 8,  
+                borderRadius: "50%",  
+                background: apiOk ? "#22C55E" : "#EF4444",  
+                display: "inline-block",  
+              }}  
+            />  
+            {apiOk ? "API online" : "API offline"}  
+          </span>  
+        </div>  
+      </div>  
+  
+      <div style={{ display: "grid", gridTemplateColumns: "1.35fr 0.65fr", minHeight: 560 }}>  
+        <div style={{ borderRight: `1px solid ${ui.border}`, background: ui.surface }}>  
+          <div style={{ height: 560, background: ui.surface2 }}>  
+            <iframe  
+              title="Bengaluru parking heatmap"  
+              src={MAP_HTML}  
+              style={{ width: "100%", height: "100%", border: "none", display: "block", background: ui.surface2 }}  
+            />  
+          </div>  
+  
+          <div  
+            style={{  
+              padding: 14,  
+              borderTop: `1px solid ${ui.border}`,  
+              display: "flex",  
+              gap: 10,  
+              flexWrap: "wrap",  
+              alignItems: "center",  
+              background: ui.surface,  
+            }}  
+          >  
+            <span style={{ fontSize: 11, color: ui.muted }}>  
+              Heatmap legend:  
+            </span>  
+            {["Critical", "High", "Medium", "Low"].map((tier) => (  
+              <TierBadge key={tier} theme={theme} tier={tier} />  
+            ))}  
+            <span style={{ fontSize: 11, color: ui.muted, marginLeft: "auto" }}>  
+              Click a hotspot on the right to inspect its risk profile.  
+            </span>  
+          </div>  
+        </div>  
+  
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, background: ui.surface2 }}>  
+          <div  
+            style={{  
+              background: ui.accentSoft,  
+              border: `1px solid ${ui.border}`,  
+              borderRadius: 16,  
+              padding: 14,  
+            }}  
+          >  
+            <div style={{ fontSize: 12, color: ui.muted, marginBottom: 6 }}>Selected hotspot</div>  
+            {selectedRow ? (  
+              <>  
+                <div style={{ fontSize: 18, fontWeight: 950, color: ui.text, marginBottom: 8 }}>{selectedRow.label}</div>  
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>  
+                  <TierBadge theme={theme} tier={selectedRow.tier} />  
+                  <span style={{ fontSize: 11, color: ui.muted }}>  
+                    Rank {selectedRow.rank ? `#${selectedRow.rank}` : "in current filter"}  
+                  </span>  
+                </div>  
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>  
+                  <div style={{ background: ui.surface, borderRadius: 14, padding: 10, border: `1px solid ${ui.border}` }}>  
+                    <div style={{ fontSize: 10, color: ui.muted }}>Congestion score</div>  
+                    <div style={{ fontSize: 18, fontWeight: 950, color: ui.text }}>{formatNumber(selectedRow.score)}</div>  
+                  </div>  
+                  <div style={{ background: ui.surface, borderRadius: 14, padding: 10, border: `1px solid ${ui.border}` }}>  
+                    <div style={{ fontSize: 10, color: ui.muted }}>Violations</div>  
+                    <div style={{ fontSize: 18, fontWeight: 950, color: ui.text }}>{formatNumber(selectedRow.violations)}</div>  
+                  </div>  
+                  <div style={{ background: ui.surface, borderRadius: 14, padding: 10, border: `1px solid ${ui.border}` }}>  
+                    <div style={{ fontSize: 10, color: ui.muted }}>Latitude</div>  
+                    <div style={{ fontSize: 14, fontWeight: 800, color: ui.text }}>{formatFloat(selectedRow.lat, 4)}</div>  
+                  </div>  
+                  <div style={{ background: ui.surface, borderRadius: 14, padding: 10, border: `1px solid ${ui.border}` }}>  
+                    <div style={{ fontSize: 10, color: ui.muted }}>Longitude</div>  
+                    <div style={{ fontSize: 14, fontWeight: 800, color: ui.text }}>{formatFloat(selectedRow.lon, 4)}</div>  
+                  </div>  
+                </div>  
+              </>  
+            ) : (  
+              <EmptyState  
+                theme={theme}  
+                title="No hotspot selected"  
+                text="Use the tier filters or click a hotspot in the list to see details here."  
+              />  
+            )}  
+          </div>  
+  
+          <div>  
+            <SectionTitle  
+              theme={theme}  
+              title="Top hotspots"  
+              subtitle="Ranked by congestion-weighted severity"  
+            />  
+            <div style={{ marginTop: 10 }}>  
+              <RankedList  
+                theme={theme}  
+                rows={topRows.map((r, idx) => ({ ...r, rank: idx + 1 }))}  
+                activeId={selectedRow?.id}  
+                onSelect={onSelect}  
+                metricLabel="Score"  
+                emptyText="No hotspots match the current filter."  
+              />  
+            </div>  
+          </div>  
+        </div>  
+      </div>  
+    </Card>  
+  );  
+}  
+  
+function ModelHealth({ theme, summary, modelInfo }) {  
+  const ui = themeUi(theme);  
+  const metrics = [  
+    ["Total violations", summary?.total_violations],  
+    ["Total clusters", summary?.total_clusters],  
+    ["Total junctions", summary?.total_junctions],  
+    ["Anomaly days", summary?.anomaly_days],  
+    ["Top cluster score", summary?.top_cluster_score],  
+    ["Forecast R²", summary?.forecast_metrics?.R2],  
+  ];  
+  
+  return (  
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>  
+      <Card theme={theme} style={{ padding: 16 }}>  
+        <SectionTitle  
+          theme={theme}  
+          title="Model summary"  
+          subtitle="Live values pulled from the backend"  
+        />  
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 12 }}>  
+          {metrics.map(([label, value]) => (  
+            <div  
+              key={label}  
+              style={{  
+                border: `1px solid ${ui.border}`,  
+                background: ui.surface2,  
+                borderRadius: 14,  
+                padding: 12,  
+              }}  
+            >  
+              <div style={{ fontSize: 10, color: ui.muted }}>{label}</div>  
+              <div style={{ fontSize: 18, fontWeight: 950, color: ui.text, marginTop: 4 }}>  
+                {typeof value === "number" ? (Number.isInteger(value) ? formatNumber(value) : formatFloat(value, 2)) : "—"}  
+              </div>  
+            </div>  
+          ))}  
+        </div>  
+        {summary?.generated_at ? (  
+          <div style={{ fontSize: 11, color: ui.muted, marginTop: 12 }}>  
+            Last generated: {String(summary.generated_at)}  
+          </div>  
+        ) : null}  
+      </Card>  
+  
+      <Card theme={theme} style={{ padding: 16 }}>  
+        <SectionTitle theme={theme} title="Model registry" subtitle="What is on disk right now" />  
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 12 }}>  
+          {Object.keys(modelInfo || {}).length ? (  
+            Object.entries(modelInfo).map(([key, info]) => (  
+              <div  
+                key={key}  
+                style={{  
+                  border: `1px solid ${ui.border}`,  
+                  borderRadius: 14,  
+                  padding: 12,  
+                  background: ui.surface2,  
+                }}  
+              >  
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>  
+                  <div style={{ fontSize: 13, fontWeight: 900, color: ui.text }}>{key}</div>  
+                  <span  
+                    style={{  
+                      fontSize: 10,  
+                      fontWeight: 900,  
+                      color: info?.loaded ? "#1F7A4D" : "#B42318",  
+                      background: info?.loaded ? "#EAFBF1" : "#FFF1F1",  
+                      borderRadius: 999,  
+                      padding: "4px 8px",  
+                    }}  
+                  >  
+                    {info?.loaded ? "loaded" : "missing"}  
+                  </span>  
+                </div>  
+                <div style={{ fontSize: 11, color: ui.muted, marginTop: 8 }}>  
+                  {info?.type ? `Type: ${info.type}` : info?.reason ?? "No details"}  
+                </div>  
+                {info?.size_kb ? (  
+                  <div style={{ fontSize: 11, color: ui.muted, marginTop: 4 }}>  
+                    Size: {info.size_kb} KB  
+                  </div>  
+                ) : null}  
+              </div>  
+            ))  
+          ) : (  
+            <div style={{ gridColumn: "1 / -1" }}>  
+              <EmptyState theme={theme} title="No model info" text="The backend did not return model metadata." />  
+            </div>  
+          )}  
+        </div>  
+      </Card>  
+    </div>  
+  );  
+}  
+  
+function App() {  
+  const [theme, setTheme] = useState("light");  
+  const [tab, setTab] = useState("overview");  
+  const [apiOk, setApiOk] = useState(false);  
+  
+  const [summary, setSummary] = useState(null);  
+  const [clusters, setClusters] = useState([]);  
+  const [mapPoints, setMapPoints] = useState([]);  
+  const [priority, setPriority] = useState([]);  
+  const [anomalies, setAnomalies] = useState([]);  
+  const [modelInfo, setModelInfo] = useState({});  
+  
+  const [selectedTier, setSelectedTier] = useState("All");  
+  const [search, setSearch] = useState("");  
+  const [selectedHotspot, setSelectedHotspot] = useState(null);  
+  
+  const ui = themeUi(theme);  
+  
+  const loadAll = useCallback(async () => {  
+    const health = await apiFetch("/health");  
+    setApiOk(!!health);  
+  
+    const [s, c, mp, p, a, mi] = await Promise.all([  
+      apiFetch("/summary"),  
+      apiFetch("/clusters?limit=60"),  
+      apiFetch("/map-points?top=60&source=clusters"),  
+      apiFetch("/priority?limit=20"),  
+      apiFetch("/anomalies?limit=20"),  
+      apiFetch("/model-info"),  
+    ]);  
+  
+    setSummary(s ?? null);  
+    setClusters(pickList(c, ["data", "clusters", "rows"]));  
+    setMapPoints(pickList(mp, ["data", "points", "clusters", "rows"]));  
+    setPriority(pickList(p, ["data", "priority", "grid", "rows"]));  
+    setAnomalies(pickList(a, ["data", "anomalies", "rows"]));  
+    setModelInfo(mi ?? {});  
+  }, []);  
+  
+  useEffect(() => {  
+    loadAll();  
+  }, [loadAll]);  
+  
+  const allHotspots = useMemo(() => {  
+    const source = mapPoints.length ? mapPoints : clusters;  
+    return source.map((row, idx) => normalizeHotspot(row, idx)).sort((a, b) => b.score - a.score);  
+  }, [mapPoints, clusters]);  
+  
+  const visibleHotspots = useMemo(() => {  
+    const q = search.trim().toLowerCase();  
+    return allHotspots  
+      .filter((row) => (selectedTier === "All" ? true : row.tier === selectedTier))  
+      .filter((row) => {  
+        if (!q) return true;  
+        const hay = `${row.label} ${row.tier} ${row.score} ${row.violations}`.toLowerCase();  
+        return hay.includes(q);  
+      })  
+      .sort((a, b) => b.score - a.score);  
+  }, [allHotspots, selectedTier, search]);  
+  
+  const priorityRows = useMemo(() => {  
+    const base = priority.length ? priority : allHotspots;  
+    return base.map((row, idx) => normalizeHotspot(row, idx)).sort((a, b) => b.score - a.score);  
+  }, [priority, allHotspots]);  
+  
+  const anomalyRows = useMemo(() => anomalies.map((row, idx) => normalizeAnomaly(row, idx)), [anomalies]);  
+  
+  useEffect(() => {  
+    if (visibleHotspots.length) {  
+      const currentId = selectedHotspot?.id;  
+      const exists = visibleHotspots.some((row) => String(row.id) === String(currentId));  
+      if (!selectedHotspot || !exists) setSelectedHotspot(visibleHotspots[0]);  
+    }  
+  }, [visibleHotspots, selectedHotspot]);  
+  
+  useEffect(() => {  
+    if (!selectedHotspot && allHotspots.length) setSelectedHotspot(allHotspots[0]);  
+  }, [allHotspots, selectedHotspot]);  
+  
+  const criticalCount = useMemo(() => allHotspots.filter((r) => r.tier === "Critical").length, [allHotspots]);  
+  
+  const onSelectHotspot = useCallback((row) => {  
+    setSelectedHotspot(row);  
+    setTab("heatmap");  
+  }, []);  
+  
+  return (  
+    <div  
+      style={{  
+        minHeight: "100vh",  
+        background: `linear-gradient(180deg, ${ui.page} 0%, ${ui.page2} 100%)`,  
+        color: ui.text,  
+      }}  
+    >  
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", minHeight: "100vh" }}>  
+        <aside  
+          style={{  
+            background: `linear-gradient(180deg, ${ui.deep} 0%, ${ui.deep2} 100%)`,  
+            color: "#fff",  
+            padding: 20,  
+            position: "sticky",  
+            top: 0,  
+            height: "100vh",  
+            display: "flex",  
+            flexDirection: "column",  
+            gap: 18,  
+          }}  
+        >  
+          <div>  
+            <div  
+              style={{  
+                width: 52,  
+                height: 52,  
+                borderRadius: 16,  
+                background: "rgba(255,255,255,0.08)",  
+                display: "flex",  
+                alignItems: "center",  
+                justifyContent: "center",  
+                fontSize: 26,  
+                fontWeight: 900,  
+                marginBottom: 10,  
+              }}  
+            >  
+              P  
+            </div>  
+            <div style={{ fontSize: 20, fontWeight: 950 }}>Parking Intelligence</div>  
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.72)", marginTop: 4 }}>  
+              Bengaluru BTP · Jan–Apr 2024  
+            </div>  
+          </div>  
+  
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>  
+            {NAV_ITEMS.map(([id, label]) => {  
+              const active = tab === id;  
+              return (  
+                <button  
+                  key={id}  
+                  type="button"  
+                  onClick={() => setTab(id)}  
+                  style={{  
+                    textAlign: "left",  
+                    border: `1px solid ${active ? "rgba(102,184,255,0.45)" : "rgba(255,255,255,0.08)"}`,  
+                    background: active ? "rgba(102,184,255,0.12)" : "rgba(255,255,255,0.03)",  
+                    color: "#fff",  
+                    borderRadius: 14,  
+                    padding: "11px 14px",  
+                    cursor: "pointer",  
+                    fontSize: 13,  
+                    fontWeight: 800,  
+                  }}  
+                >  
+                  {label}  
+                </button>  
+              );  
+            })}  
+          </div>  
+  
+          <div  
+            style={{  
+              marginTop: "auto",  
+              paddingTop: 14,  
+              borderTop: "1px solid rgba(255,255,255,0.10)",  
+            }}  
+          >  
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.72)" }}>API status</div>  
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>  
+              <span  
+                style={{  
+                  width: 10,  
+                  height: 10,  
+                  borderRadius: "50%",  
+                  background: apiOk ? "#22C55E" : "#EF4444",  
+                  boxShadow: apiOk ? "0 0 0 4px rgba(34,197,94,0.18)" : "0 0 0 4px rgba(239,68,68,0.16)",  
+                }}  
+              />  
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{apiOk ? "Connected" : "Disconnected"}</span>  
+            </div>  
+  
+            <button  
+              type="button"  
+              onClick={loadAll}  
+              style={{  
+                marginTop: 14,  
+                width: "100%",  
+                border: "none",  
+                background: "#66B8FF",  
+                color: "#0B1B2B",  
+                borderRadius: 12,  
+                padding: "10px 12px",  
+                fontWeight: 900,  
+                cursor: "pointer",  
+              }}  
+            >  
+              Refresh data  
+            </button>  
+  
+            <button  
+              type="button"  
+              onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}  
+              style={{  
+                marginTop: 10,  
+                width: "100%",  
+                border: "1px solid rgba(255,255,255,0.14)",  
+                background: "rgba(255,255,255,0.04)",  
+                color: "#fff",  
+                borderRadius: 12,  
+                padding: "10px 12px",  
+                fontWeight: 900,  
+                cursor: "pointer",  
+              }}  
+            >  
+              {theme === "light" ? "Dark blue theme" : "Light blue theme"}  
+            </button>  
+          </div>  
+        </aside>  
+  
+        <main style={{ padding: 20, overflowX: "hidden" }}>  
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>  
+            <div>  
+              <div style={{ fontSize: 12, color: ui.muted }}>AI-driven parking intelligence dashboard</div>  
+              <div style={{ fontSize: 28, fontWeight: 950, color: ui.text, marginTop: 2 }}>  
+                Illegal parking hotspots and enforcement priority  
+              </div>  
+            </div>  
+  
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>  
+              <button  
+                type="button"  
+                onClick={loadAll}  
+                style={{  
+                  borderRadius: 12,  
+                  border: `1px solid ${ui.border}`,  
+                  background: ui.surface,  
+                  color: ui.text,  
+                  padding: "10px 14px",  
+                  fontWeight: 800,  
+                  cursor: "pointer",  
+                }}  
+              >  
+                Reload  
+              </button>  
+              <button  
+                type="button"  
+                onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}  
+                style={{  
+                  borderRadius: 12,  
+                  border: `1px solid ${ui.border}`,  
+                  background: ui.surface,  
+                  color: ui.text,  
+                  padding: "10px 14px",  
+                  fontWeight: 800,  
+                  cursor: "pointer",  
+                }}  
+              >  
+                Toggle theme  
+              </button>  
+            </div>  
+          </div>  
+  
+          {tab === "overview" && (  
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>  
+              <HeatmapHero  
+                theme={theme}  
+                allRows={allHotspots}  
+                visibleRows={visibleHotspots}  
+                selected={selectedHotspot}  
+                onSelect={onSelectHotspot}  
+                selectedTier={selectedTier}  
+                setSelectedTier={setSelectedTier}  
+                search={search}  
+                setSearch={setSearch}  
+                apiOk={apiOk}  
+              />  
+  
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>  
+                <KPI theme={theme} label="Total violations" value={formatNumber(summary?.total_violations)} tone="red" />  
+                <KPI theme={theme} label="Hotspot clusters" value={formatNumber(summary?.total_clusters)} tone="orange" />  
+                <KPI theme={theme} label="Critical hotspots" value={formatNumber(criticalCount)} tone="red" />  
+                <KPI theme={theme} label="Anomaly days" value={formatNumber(summary?.anomaly_days)} tone="blue" />  
+                <KPI theme={theme} label="Top cluster score" value={formatNumber(summary?.top_cluster_score)} tone="orange" />  
+                <KPI theme={theme} label="Forecast R²" value={formatFloat(summary?.forecast_metrics?.R2, 3)} tone="green" />  
+              </div>  
+  
+              <div style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 16, alignItems: "start" }}>  
+                <Card theme={theme} style={{ padding: 16 }}>  
+                  <SectionTitle  
+                    theme={theme}  
+                    title="Ranked hotspot queue"  
+                    subtitle="Clusters sorted by congestion-weighted severity"  
+                  />  
+                  <div style={{ marginTop: 12 }}>  
+                    <RankedList  
+                      theme={theme}  
+                      rows={visibleHotspots.slice(0, 12)}  
+                      activeId={selectedHotspot?.id}  
+                      onSelect={onSelectHotspot}  
+                      metricLabel="Score"  
+                      emptyText="No hotspots match the current filter."  
+                    />  
+                  </div>  
+                </Card>  
+  
+                <ModelHealth theme={theme} summary={summary} modelInfo={modelInfo} />  
+              </div>  
+  
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>  
+                <Card theme={theme} style={{ padding: 16 }}>  
+                  <SectionTitle  
+                    theme={theme}  
+                    title="Enforcement priority"  
+                    subtitle="Use this as the action queue for patrol planning"  
+                  />  
+                  <div style={{ marginTop: 12 }}>  
+                    <RankedList  
+                      theme={theme}  
+                      rows={priorityRows.slice(0, 12)}  
+                      activeId={selectedHotspot?.id}  
+                      onSelect={onSelectHotspot}  
+                      metricLabel="Priority"  
+                      emptyText="No priority rows available."  
+                    />  
+                  </div>  
+                </Card>  
+  
+                <Card theme={theme} style={{ padding: 16 }}>  
+                  <SectionTitle  
+                    theme={theme}  
+                    title="Anomaly feed"  
+                    subtitle="Unexpected days or records that deviated from normal patterns"  
+                  />  
+                  <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>  
+                    {anomalyRows.length ? (  
+                      anomalyRows.slice(0, 10).map((row, idx) => {  
+                        const abnormal = row.flag === -1 || row.flag === "-1";  
+                        return (  
+                          <div  
+                            key={String(row.id ?? idx)}  
+                            style={{  
+                              border: `1px solid ${ui.border}`,  
+                              background: ui.surface2,  
+                              borderRadius: 14,  
+                              padding: 12,  
+                              display: "flex",  
+                              justifyContent: "space-between",  
+                              gap: 12,  
+                              alignItems: "center",  
+                            }}  
+                          >  
+                            <div>  
+                              <div style={{ fontSize: 12.5, fontWeight: 900, color: ui.text }}>{row.label}</div>  
+                              <div style={{ fontSize: 11, color: ui.muted, marginTop: 4 }}>  
+                                {abnormal ? "Detected anomaly" : "Normal behavior"}  
+                              </div>  
+                            </div>  
+                            <div style={{ textAlign: "right" }}>  
+                              <div style={{ fontSize: 13, fontWeight: 950, color: abnormal ? "#B42318" : ui.text }}>  
+                                {formatFloat(row.score, 3)}  
+                              </div>  
+                              <div style={{ fontSize: 10, color: ui.muted }}>anomaly score</div>  
+                            </div>  
+                          </div>  
+                        );  
+                      })  
+                    ) : (  
+                      <EmptyState  
+                        theme={theme}  
+                        title="No anomalies yet"  
+                        text="The backend did not return anomaly rows, or the anomaly artifact is missing."  
+                      />  
+                    )}  
+                  </div>  
+                </Card>  
+              </div>  
+            </div>  
+          )}  
+  
+          {tab === "heatmap" && (  
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>  
+              <HeatmapHero  
+                theme={theme}  
+                allRows={allHotspots}  
+                visibleRows={visibleHotspots}  
+                selected={selectedHotspot}  
+                onSelect={onSelectHotspot}  
+                selectedTier={selectedTier}  
+                setSelectedTier={setSelectedTier}  
+                search={search}  
+                setSearch={setSearch}  
+                apiOk={apiOk}  
+              />  
+            </div>  
+          )}  
+  
+          {tab === "priority" && (  
+            <Card theme={theme} style={{ padding: 16 }}>  
+              <SectionTitle  
+                theme={theme}  
+                title="Enforcement priority"  
+                subtitle="Ranked by congestion-weighted risk and operational urgency"  
+              />  
+              <div style={{ marginTop: 12 }}>  
+                <RankedList  
+                  theme={theme}  
+                  rows={priorityRows}  
+                  activeId={selectedHotspot?.id}  
+                  onSelect={onSelectHotspot}  
+                  metricLabel="Priority"  
+                  emptyText="No priority rows available."  
+                />  
+              </div>  
+            </Card>  
+          )}  
+  
+          {tab === "anomalies" && (  
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 0.8fr", gap: 16, alignItems: "start" }}>  
+              <Card theme={theme} style={{ padding: 16 }}>  
+                <SectionTitle  
+                  theme={theme}  
+                  title="Anomaly detections"  
+                  subtitle="Days or records that deviated from the normal pattern"  
+                />  
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>  
+                  {anomalyRows.length ? (  
+                    anomalyRows.map((row, idx) => {  
+                      const abnormal = row.flag === -1 || row.flag === "-1";  
+                      return (  
+                        <div  
+                          key={String(row.id ?? idx)}  
+                          style={{  
+                            border: `1px solid ${ui.border}`,  
+                            background: ui.surface2,  
+                            borderRadius: 14,  
+                            padding: 12,  
+                            display: "flex",  
+                            justifyContent: "space-between",  
+                            gap: 12,  
+                            alignItems: "center",  
+                          }}  
+                        >  
+                          <div>  
+                            <div style={{ fontSize: 12.5, fontWeight: 900, color: ui.text }}>{row.label}</div>  
+                            <div style={{ fontSize: 11, color: ui.muted, marginTop: 4 }}>  
+                              {abnormal ? "Anomalous pattern" : "Normal pattern"}  
+                            </div>  
+                          </div>  
+                          <div style={{ textAlign: "right" }}>  
+                            <div style={{ fontSize: 13, fontWeight: 950, color: abnormal ? "#B42318" : ui.text }}>  
+                              {formatFloat(row.score, 3)}  
+                            </div>  
+                            <div style={{ fontSize: 10, color: ui.muted }}>anomaly score</div>  
+                          </div>  
+                        </div>  
+                      );  
+                    })  
+                  ) : (  
+                    <EmptyState  
+                      theme={theme}  
+                      title="No anomaly data"  
+                      text="The backend did not return anomaly rows."  
+                    />  
+                  )}  
+                </div>  
+              </Card>  
+  
+              <Card theme={theme} style={{ padding: 16 }}>  
+                <SectionTitle  
+                  theme={theme}  
+                  title="How to read anomalies"  
+                  subtitle="Useful shortcuts for operations"  
+                />  
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>  
+                  <EmptyState  
+                    theme={theme}  
+                    title="Lower scores are more unusual"  
+                    text="Use anomalies to explain sudden changes in the heatmap, event spikes, or enforcement bursts."  
+                  />  
+                  <EmptyState  
+                    theme={theme}  
+                    title="Do not overreact to one day"  
+                    text="Check whether anomalies align with weekends, events, or patrol shifts before changing enforcement."  
+                  />  
+                </div>  
+              </Card>  
+            </div>  
+          )}  
+  
+          {tab === "models" && (  
+            <ModelHealth theme={theme} summary={summary} modelInfo={modelInfo} />  
+          )}  
+        </main>  
+      </div>  
+    </div>  
+  );  
+}  
+  
+export default App;
