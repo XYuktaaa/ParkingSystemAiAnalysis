@@ -1,0 +1,12 @@
+{
+  "name": "trafic-analysis",
+  "version": "1.0.0",
+  "description": "ai model and backend",
+  "license": "ISC",
+  "author": "yukta",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

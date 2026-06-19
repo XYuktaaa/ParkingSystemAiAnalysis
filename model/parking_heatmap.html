@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_dc33bd00c106e59a4d48a18d00f69560 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_dc33bd00c106e59a4d48a18d00f69560" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_dc33bd00c106e59a4d48a18d00f69560 = L.map(
+                "map_dc33bd00c106e59a4d48a18d00f69560",
+                {
+                    center: [12.973097782750788, 77.57654109882607],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_06e0447468a28f3c3803fcf4d3d00048 = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_06e0447468a28f3c3803fcf4d3d00048.addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+            var circle_marker_59fea7f6b17426b586d5b014d5acdc1d = L.circleMarker(
+                [12.977363919873055, 77.57529591065261],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 30, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_fc617c0390024e7dccdbfa1aa9c2eea7 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_480eb9c228229c1dff70ce418e1e7fec = $(`<div id="html_480eb9c228229c1dff70ce418e1e7fec" style="width: 100.0%; height: 100.0%;"><b>Cluster 0</b><br>Violations: 134057<br>Congestion score: 148947<br>Top junction: BTP051 - Safina Plaza Junction</div>`)[0];
+                popup_fc617c0390024e7dccdbfa1aa9c2eea7.setContent(html_480eb9c228229c1dff70ce418e1e7fec);
+            
+        
+
+        circle_marker_59fea7f6b17426b586d5b014d5acdc1d.bindPopup(popup_fc617c0390024e7dccdbfa1aa9c2eea7)
+        ;
+
+        
+    
+    
+            var circle_marker_534b3ec0871b03a963812257421c9a68 = L.circleMarker(
+                [12.922653545707846, 77.581132809018],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 17.53, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_63a2a3119f4d8789cf2109d4227cbca4 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_d4f495eaf848683cfcd4b6b21892f05e = $(`<div id="html_d4f495eaf848683cfcd4b6b21892f05e" style="width: 100.0%; height: 100.0%;"><b>Cluster 4</b><br>Violations: 4322<br>Congestion score: 5259<br>Top junction: BTP189 - New Diagonal Road, Jayanagar</div>`)[0];
+                popup_63a2a3119f4d8789cf2109d4227cbca4.setContent(html_d4f495eaf848683cfcd4b6b21892f05e);
+            
+        
+
+        circle_marker_534b3ec0871b03a963812257421c9a68.bindPopup(popup_63a2a3119f4d8789cf2109d4227cbca4)
+        ;
+
+        
+    
+    
+            var circle_marker_5d0c9d15e8f0857b90772b88d758d7d2 = L.circleMarker(
+                [12.953297920033616, 77.54242467963967],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 9.16, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_d7382e95b5c2627e84634cb6130277b4 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_bccc93aa9c07b2341b2056bbd7afaeaa = $(`<div id="html_bccc93aa9c07b2341b2056bbd7afaeaa" style="width: 100.0%; height: 100.0%;"><b>Cluster 14</b><br>Violations: 1857<br>Congestion score: 2748<br>Top junction: BTP096 - Gali Anjaneya Temple</div>`)[0];
+                popup_d7382e95b5c2627e84634cb6130277b4.setContent(html_bccc93aa9c07b2341b2056bbd7afaeaa);
+            
+        
+
+        circle_marker_5d0c9d15e8f0857b90772b88d758d7d2.bindPopup(popup_d7382e95b5c2627e84634cb6130277b4)
+        ;
+
+        
+    
+    
+            var circle_marker_00921b38d796810c087ff9ed65e61935 = L.circleMarker(
+                [12.934400133113458, 77.60636662796834],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_9c084943e7cec0a8451754fe88debb61 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_84e9106dd2ec8146d300895134dc226b = $(`<div id="html_84e9106dd2ec8146d300895134dc226b" style="width: 100.0%; height: 100.0%;"><b>Cluster 8</b><br>Violations: 758<br>Congestion score: 1798<br>Top junction: BTP136 - Hosur-Tavarkere Road Junction</div>`)[0];
+                popup_9c084943e7cec0a8451754fe88debb61.setContent(html_84e9106dd2ec8146d300895134dc226b);
+            
+        
+
+        circle_marker_00921b38d796810c087ff9ed65e61935.bindPopup(popup_9c084943e7cec0a8451754fe88debb61)
+        ;
+
+        
+    
+    
+            var circle_marker_22a2d7ae0d73a96c49f58f6d89d2933c = L.circleMarker(
+                [12.935305143695652, 77.61493590775362],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_421235fc029ab551c5c4835e62187e85 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_ffbedd361adf2205d3c0abc348ad2b92 = $(`<div id="html_ffbedd361adf2205d3c0abc348ad2b92" style="width: 100.0%; height: 100.0%;"><b>Cluster 15</b><br>Violations: 1380<br>Congestion score: 1680<br>Top junction: BTP135 - UCO Bank Junction</div>`)[0];
+                popup_421235fc029ab551c5c4835e62187e85.setContent(html_ffbedd361adf2205d3c0abc348ad2b92);
+            
+        
+
+        circle_marker_22a2d7ae0d73a96c49f58f6d89d2933c.bindPopup(popup_421235fc029ab551c5c4835e62187e85)
+        ;
+
+        
+    
+    
+            var circle_marker_59c0d4a7551b84a0683ce814114dbf90 = L.circleMarker(
+                [12.965221109977085, 77.6414689023328],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_5d1c796c66d1661ab36f0b86bc47d296 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_b1e233f8269dcde745c58bf56684d71e = $(`<div id="html_b1e233f8269dcde745c58bf56684d71e" style="width: 100.0%; height: 100.0%;"><b>Cluster 32</b><br>Violations: 508<br>Congestion score: 1090<br>Top junction: BTP148 - 17th Main, Doopanahalli Bus Stop</div>`)[0];
+                popup_5d1c796c66d1661ab36f0b86bc47d296.setContent(html_b1e233f8269dcde745c58bf56684d71e);
+            
+        
+
+        circle_marker_59c0d4a7551b84a0683ce814114dbf90.bindPopup(popup_5d1c796c66d1661ab36f0b86bc47d296)
+        ;
+
+        
+    
+    
+            var circle_marker_64d12a4a24f762986a00b886e6843935 = L.circleMarker(
+                [12.917177802479339, 77.59607140371901],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_e40ba6168d5ccaa8ff208fe25bce0524 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_7575b1b16cd033cc96e2b50e69613ac3 = $(`<div id="html_7575b1b16cd033cc96e2b50e69613ac3" style="width: 100.0%; height: 100.0%;"><b>Cluster 27</b><br>Violations: 242<br>Congestion score: 943<br>Top junction: BTP202 - East End Main Road, Jayanagar</div>`)[0];
+                popup_e40ba6168d5ccaa8ff208fe25bce0524.setContent(html_7575b1b16cd033cc96e2b50e69613ac3);
+            
+        
+
+        circle_marker_64d12a4a24f762986a00b886e6843935.bindPopup(popup_e40ba6168d5ccaa8ff208fe25bce0524)
+        ;
+
+        
+    
+    
+            var circle_marker_9f466692473beaba22bacd47ddecc660 = L.circleMarker(
+                [12.923581175727504, 77.61962002520102],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_ce727ba6f109b2f598f5f2c65242732e = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_52a2b414a6cca8fa5298bf8c4d219331 = $(`<div id="html_52a2b414a6cca8fa5298bf8c4d219331" style="width: 100.0%; height: 100.0%;"><b>Cluster 23</b><br>Violations: 651<br>Congestion score: 787<br>Top junction: BTP137 - Madiwala Traffic PS Junction</div>`)[0];
+                popup_ce727ba6f109b2f598f5f2c65242732e.setContent(html_52a2b414a6cca8fa5298bf8c4d219331);
+            
+        
+
+        circle_marker_9f466692473beaba22bacd47ddecc660.bindPopup(popup_ce727ba6f109b2f598f5f2c65242732e)
+        ;
+
+        
+    
+    
+            var circle_marker_c68372fc97deb0d9ca02a61a0399a2d6 = L.circleMarker(
+                [12.960687642976461, 77.64013023340848],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_4409cf7ba113a57adc5b724151d5c0d8 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_9c3d4c4049c2670158cbf7c766f741f9 = $(`<div id="html_9c3d4c4049c2670158cbf7c766f741f9" style="width: 100.0%; height: 100.0%;"><b>Cluster 18</b><br>Violations: 552<br>Congestion score: 718<br>Top junction: BTP148 - 17th Main, Doopanahalli Bus Stop</div>`)[0];
+                popup_4409cf7ba113a57adc5b724151d5c0d8.setContent(html_9c3d4c4049c2670158cbf7c766f741f9);
+            
+        
+
+        circle_marker_c68372fc97deb0d9ca02a61a0399a2d6.bindPopup(popup_4409cf7ba113a57adc5b724151d5c0d8)
+        ;
+
+        
+    
+    
+            var circle_marker_4356c28e3a7eca6cfcb7a05315fc9b37 = L.circleMarker(
+                [12.90801301197411, 77.60082311488674],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_157782174aaa716845b304deea524cb4 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_74fc388f2df5a1a4099c85f2b284aa7b = $(`<div id="html_74fc388f2df5a1a4099c85f2b284aa7b" style="width: 100.0%; height: 100.0%;"><b>Cluster 16</b><br>Violations: 618<br>Congestion score: 679<br>Top junction: BTP130 - GD Mara Junction</div>`)[0];
+                popup_157782174aaa716845b304deea524cb4.setContent(html_74fc388f2df5a1a4099c85f2b284aa7b);
+            
+        
+
+        circle_marker_4356c28e3a7eca6cfcb7a05315fc9b37.bindPopup(popup_157782174aaa716845b304deea524cb4)
+        ;
+
+        
+    
+    
+            var circle_marker_1a788e03f84954c4ffd62cd6e3f04cb7 = L.circleMarker(
+                [12.938683009630818, 77.5841870048154],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_2d468fca5007dedfaa072168024c51e9 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_a2e5e1d44836ee9fdb33308ada7ca378 = $(`<div id="html_a2e5e1d44836ee9fdb33308ada7ca378" style="width: 100.0%; height: 100.0%;"><b>Cluster 10</b><br>Violations: 623<br>Congestion score: 623<br>Top junction: BTP186 - 9th Cross, 4th Main, Jayanagar</div>`)[0];
+                popup_2d468fca5007dedfaa072168024c51e9.setContent(html_a2e5e1d44836ee9fdb33308ada7ca378);
+            
+        
+
+        circle_marker_1a788e03f84954c4ffd62cd6e3f04cb7.bindPopup(popup_2d468fca5007dedfaa072168024c51e9)
+        ;
+
+        
+    
+    
+            var circle_marker_1c0cbb3a589eb337d1e12c7d36f0d66d = L.circleMarker(
+                [12.996652109138907, 77.58424717013389],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_492a46c0d453806cdb2130f573c605f2 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_1180a22f29ea7b7dfcdef1bde4a3d386 = $(`<div id="html_1180a22f29ea7b7dfcdef1bde4a3d386" style="width: 100.0%; height: 100.0%;"><b>Cluster 9</b><br>Violations: 364<br>Congestion score: 576<br>Top junction: BTP032 - Windsor Circle</div>`)[0];
+                popup_492a46c0d453806cdb2130f573c605f2.setContent(html_1180a22f29ea7b7dfcdef1bde4a3d386);
+            
+        
+
+        circle_marker_1c0cbb3a589eb337d1e12c7d36f0d66d.bindPopup(popup_492a46c0d453806cdb2130f573c605f2)
+        ;
+
+        
+    
+    
+            var circle_marker_b81f321188edda60465ac8bc0fe75d1b = L.circleMarker(
+                [12.945497439877103, 77.59465277058467],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_bea953e42514216b46c78be3b529337b = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_74169790ede77c8c3dee35bf3a01ba7f = $(`<div id="html_74169790ede77c8c3dee35bf3a01ba7f" style="width: 100.0%; height: 100.0%;"><b>Cluster 5</b><br>Violations: 496<br>Congestion score: 500<br>Top junction: BTP123 - 10th Cross, Wilson Garden</div>`)[0];
+                popup_bea953e42514216b46c78be3b529337b.setContent(html_74169790ede77c8c3dee35bf3a01ba7f);
+            
+        
+
+        circle_marker_b81f321188edda60465ac8bc0fe75d1b.bindPopup(popup_bea953e42514216b46c78be3b529337b)
+        ;
+
+        
+    
+    
+            var circle_marker_f041582983d63766cf1dee88b5e20473 = L.circleMarker(
+                [12.960593369329898, 77.52924597371134],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_86ae3d8d8819c5662e79ec96aee996a3 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_357cac0e833857ba728cb1e6403fac4f = $(`<div id="html_357cac0e833857ba728cb1e6403fac4f" style="width: 100.0%; height: 100.0%;"><b>Cluster 22</b><br>Violations: 388<br>Congestion score: 440<br>Top junction: BTP017 - Attiguppe Circle</div>`)[0];
+                popup_86ae3d8d8819c5662e79ec96aee996a3.setContent(html_357cac0e833857ba728cb1e6403fac4f);
+            
+        
+
+        circle_marker_f041582983d63766cf1dee88b5e20473.bindPopup(popup_86ae3d8d8819c5662e79ec96aee996a3)
+        ;
+
+        
+    
+    
+            var circle_marker_072e312367a43162a303d2094d68feff = L.circleMarker(
+                [12.9266994100295, 77.55074285663717],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_f22a9537ff3bd4b3feab524822a2f464 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_832f46e8835b4656f43bf5ffe462d668 = $(`<div id="html_832f46e8835b4656f43bf5ffe462d668" style="width: 100.0%; height: 100.0%;"><b>Cluster 7</b><br>Violations: 339<br>Congestion score: 420<br>Top junction: BTP155 - Katriguppe Junction</div>`)[0];
+                popup_f22a9537ff3bd4b3feab524822a2f464.setContent(html_832f46e8835b4656f43bf5ffe462d668);
+            
+        
+
+        circle_marker_072e312367a43162a303d2094d68feff.bindPopup(popup_f22a9537ff3bd4b3feab524822a2f464)
+        ;
+
+        
+    
+    
+            var circle_marker_827b2b001936434b11592623bc13bc31 = L.circleMarker(
+                [12.944563009139786, 77.52803096344086],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_57451a3a170ca8105ea13ef11c47d585 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_52c066508a8104fa66f4e3ff09cbccf9 = $(`<div id="html_52c066508a8104fa66f4e3ff09cbccf9" style="width: 100.0%; height: 100.0%;"><b>Cluster 31</b><br>Violations: 186<br>Congestion score: 371<br>Top junction: BTP098 - Nayandahalli Junction</div>`)[0];
+                popup_57451a3a170ca8105ea13ef11c47d585.setContent(html_52c066508a8104fa66f4e3ff09cbccf9);
+            
+        
+
+        circle_marker_827b2b001936434b11592623bc13bc31.bindPopup(popup_57451a3a170ca8105ea13ef11c47d585)
+        ;
+
+        
+    
+    
+            var circle_marker_241a39529aba3b16c922062ef8ece11e = L.circleMarker(
+                [12.938270633862617, 77.5780433016548],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_6268aabaa5b2f574f4af439775f69ed5 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_d66a3a6e0a2cc290419f0f1aad56021b = $(`<div id="html_d66a3a6e0a2cc290419f0f1aad56021b" style="width: 100.0%; height: 100.0%;"><b>Cluster 28</b><br>Violations: 326<br>Congestion score: 333<br>Top junction: BTP216 - Yediyur Junction</div>`)[0];
+                popup_6268aabaa5b2f574f4af439775f69ed5.setContent(html_d66a3a6e0a2cc290419f0f1aad56021b);
+            
+        
+
+        circle_marker_241a39529aba3b16c922062ef8ece11e.bindPopup(popup_6268aabaa5b2f574f4af439775f69ed5)
+        ;
+
+        
+    
+    
+            var circle_marker_b91b75f6452402530c29fc4a5f6f19b5 = L.circleMarker(
+                [12.913958824333333, 77.60814764266667],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_8f5427ddebc62246d50ced88be1d377b = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_90ae7395b8e48eed8f9a500fb2fc923a = $(`<div id="html_90ae7395b8e48eed8f9a500fb2fc923a" style="width: 100.0%; height: 100.0%;"><b>Cluster 3</b><br>Violations: 300<br>Congestion score: 300<br>Top junction: BTP163 - 16th Main Road, BTM Layout</div>`)[0];
+                popup_8f5427ddebc62246d50ced88be1d377b.setContent(html_90ae7395b8e48eed8f9a500fb2fc923a);
+            
+        
+
+        circle_marker_b91b75f6452402530c29fc4a5f6f19b5.bindPopup(popup_8f5427ddebc62246d50ced88be1d377b)
+        ;
+
+        
+    
+    
+            var circle_marker_44764a4aee9efcfb792f617f90abb785 = L.circleMarker(
+                [12.905515078723404, 77.58834754202127],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_03692d430fcb60fe137c088076acce59 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_3e1c487d09562e41e51df58d9442e8be = $(`<div id="html_3e1c487d09562e41e51df58d9442e8be" style="width: 100.0%; height: 100.0%;"><b>Cluster 19</b><br>Violations: 188<br>Congestion score: 281<br>Top junction: BTP221 - 15th Cross, 24th Main, JP Nagar</div>`)[0];
+                popup_03692d430fcb60fe137c088076acce59.setContent(html_3e1c487d09562e41e51df58d9442e8be);
+            
+        
+
+        circle_marker_44764a4aee9efcfb792f617f90abb785.bindPopup(popup_03692d430fcb60fe137c088076acce59)
+        ;
+
+        
+    
+    
+            var circle_marker_ea1c1a5158603c8d3d8f0b1341a7fe28 = L.circleMarker(
+                [12.927338608196722, 77.59710771639344],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_edd5a13fb2d278d5cbe48c0ba6031cdf = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_a38b2edafb1fa4a40183712628c50c89 = $(`<div id="html_a38b2edafb1fa4a40183712628c50c89" style="width: 100.0%; height: 100.0%;"><b>Cluster 44</b><br>Violations: 61<br>Congestion score: 279<br>Top junction: BTP127 - Sagar Hospital, Jayanagar</div>`)[0];
+                popup_edd5a13fb2d278d5cbe48c0ba6031cdf.setContent(html_a38b2edafb1fa4a40183712628c50c89);
+            
+        
+
+        circle_marker_ea1c1a5158603c8d3d8f0b1341a7fe28.bindPopup(popup_edd5a13fb2d278d5cbe48c0ba6031cdf)
+        ;
+
+        
+    
+    
+            var circle_marker_8d52c41994cbf2e53a3c7ea4235cd2c2 = L.circleMarker(
+                [12.963783745323742, 77.55734329640288],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_904bb6089251a80ec3b756f1d68609c8 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_2a21724b173f185a72a95d6af14dabf3 = $(`<div id="html_2a21724b173f185a72a95d6af14dabf3" style="width: 100.0%; height: 100.0%;"><b>Cluster 2</b><br>Violations: 139<br>Congestion score: 268<br>Top junction: BTP091 - Sirsi Circle</div>`)[0];
+                popup_904bb6089251a80ec3b756f1d68609c8.setContent(html_2a21724b173f185a72a95d6af14dabf3);
+            
+        
+
+        circle_marker_8d52c41994cbf2e53a3c7ea4235cd2c2.bindPopup(popup_904bb6089251a80ec3b756f1d68609c8)
+        ;
+
+        
+    
+    
+            var circle_marker_21a9984dcbdf9c874a80ef298c79ae85 = L.circleMarker(
+                [12.988590471260592, 77.59200602998645],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_4ef854b9f7795916c0226debd5e57220 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_0b675f96c986d6e34792208dfb0868bc = $(`<div id="html_0b675f96c986d6e34792208dfb0868bc" style="width: 100.0%; height: 100.0%;"><b>Cluster 1</b><br>Violations: 201<br>Congestion score: 218<br>Top junction: BTP034 - LRDE Junction</div>`)[0];
+                popup_4ef854b9f7795916c0226debd5e57220.setContent(html_0b675f96c986d6e34792208dfb0868bc);
+            
+        
+
+        circle_marker_21a9984dcbdf9c874a80ef298c79ae85.bindPopup(popup_4ef854b9f7795916c0226debd5e57220)
+        ;
+
+        
+    
+    
+            var circle_marker_34e904c6d2c52c96a606ffd870c670c7 = L.circleMarker(
+                [12.949584403414635, 77.59710971707317],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_0f11caa7c80248c4aece1e7a439cd53a = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_a08b7bb06bdc30f075bbbc98b429be7a = $(`<div id="html_a08b7bb06bdc30f075bbbc98b429be7a" style="width: 100.0%; height: 100.0%;"><b>Cluster 17</b><br>Violations: 205<br>Congestion score: 205<br>Top junction: BTP123 - 10th Cross, Wilson Garden</div>`)[0];
+                popup_0f11caa7c80248c4aece1e7a439cd53a.setContent(html_a08b7bb06bdc30f075bbbc98b429be7a);
+            
+        
+
+        circle_marker_34e904c6d2c52c96a606ffd870c670c7.bindPopup(popup_0f11caa7c80248c4aece1e7a439cd53a)
+        ;
+
+        
+    
+    
+            var circle_marker_41959f988f0c0e6ce8c5c749f6a8ea33 = L.circleMarker(
+                [12.975059596125329, 77.60752888720947],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_1282a355ecd2f67e08e044a2dd2757ec = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_2dd97069e2893742754c67904f144673 = $(`<div id="html_2dd97069e2893742754c67904f144673" style="width: 100.0%; height: 100.0%;"><b>Cluster 33</b><br>Violations: 144<br>Congestion score: 197<br>Top junction: BTP051 - Safina Plaza Junction</div>`)[0];
+                popup_1282a355ecd2f67e08e044a2dd2757ec.setContent(html_2dd97069e2893742754c67904f144673);
+            
+        
+
+        circle_marker_41959f988f0c0e6ce8c5c749f6a8ea33.bindPopup(popup_1282a355ecd2f67e08e044a2dd2757ec)
+        ;
+
+        
+    
+    
+            var circle_marker_fdd2bc75fc1accda53b6f16c4f6e8dbe = L.circleMarker(
+                [12.951251251265823, 77.60690484050633],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_df7c16dc6453f81122255f8913903b80 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_919099988a90e651d38400e6f213bd84 = $(`<div id="html_919099988a90e651d38400e6f213bd84" style="width: 100.0%; height: 100.0%;"><b>Cluster 13</b><br>Violations: 158<br>Congestion score: 173<br>Top junction: BTP132 - Anepalya Junction</div>`)[0];
+                popup_df7c16dc6453f81122255f8913903b80.setContent(html_919099988a90e651d38400e6f213bd84);
+            
+        
+
+        circle_marker_fdd2bc75fc1accda53b6f16c4f6e8dbe.bindPopup(popup_df7c16dc6453f81122255f8913903b80)
+        ;
+
+        
+    
+    
+            var circle_marker_40dc32c64fe51b1108d4d6a28f6f0bbf = L.circleMarker(
+                [12.921661348715313, 77.5806560085526],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_4c8af37edfece203d05cf0d19720f45d = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_b81d122d3009cb90ece0881a77acc50f = $(`<div id="html_b81d122d3009cb90ece0881a77acc50f" style="width: 100.0%; height: 100.0%;"><b>Cluster 29</b><br>Violations: 146<br>Congestion score: 161<br>Top junction: BTP190 - 36th Cross, 4th Main, Jayanagar</div>`)[0];
+                popup_4c8af37edfece203d05cf0d19720f45d.setContent(html_b81d122d3009cb90ece0881a77acc50f);
+            
+        
+
+        circle_marker_40dc32c64fe51b1108d4d6a28f6f0bbf.bindPopup(popup_4c8af37edfece203d05cf0d19720f45d)
+        ;
+
+        
+    
+    
+            var circle_marker_11ae8678c1c8de2969fe36c4643d6a61 = L.circleMarker(
+                [12.941769495774649, 77.60858436239437],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_fa6680bb8d0e8ae80d1f521031d0a53d = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_152a90c9f73a73138957ab6756352cd5 = $(`<div id="html_152a90c9f73a73138957ab6756352cd5" style="width: 100.0%; height: 100.0%;"><b>Cluster 36</b><br>Violations: 71<br>Congestion score: 126<br>Top junction: BTP133 - Adugodi Junction</div>`)[0];
+                popup_fa6680bb8d0e8ae80d1f521031d0a53d.setContent(html_152a90c9f73a73138957ab6756352cd5);
+            
+        
+
+        circle_marker_11ae8678c1c8de2969fe36c4643d6a61.bindPopup(popup_fa6680bb8d0e8ae80d1f521031d0a53d)
+        ;
+
+        
+    
+    
+            var circle_marker_392637660f3f848bd3c56c2965ddd012 = L.circleMarker(
+                [12.975857914285715, 77.53164163809524],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_2b6602f4c3f5ddbfe26da08e36713220 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_3470a3ec6dceeb3a253ee172ae148021 = $(`<div id="html_3470a3ec6dceeb3a253ee172ae148021" style="width: 100.0%; height: 100.0%;"><b>Cluster 30</b><br>Violations: 105<br>Congestion score: 120<br>Top junction: BTP214 - 5th Main Chamrajpet  Junction</div>`)[0];
+                popup_2b6602f4c3f5ddbfe26da08e36713220.setContent(html_3470a3ec6dceeb3a253ee172ae148021);
+            
+        
+
+        circle_marker_392637660f3f848bd3c56c2965ddd012.bindPopup(popup_2b6602f4c3f5ddbfe26da08e36713220)
+        ;
+
+        
+    
+    
+            var circle_marker_e7a7f75dce7008c58b8d2d50d0cdb770 = L.circleMarker(
+                [12.985517825892858, 77.59413829107143],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_d9a15b30a5f98f2f29b400d00dd782d3 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_15618d765ae93d33026a403ef7f0d04b = $(`<div id="html_15618d765ae93d33026a403ef7f0d04b" style="width: 100.0%; height: 100.0%;"><b>Cluster 11</b><br>Violations: 112<br>Congestion score: 118<br>Top junction: BTP166 - Coffee Board Junction</div>`)[0];
+                popup_d9a15b30a5f98f2f29b400d00dd782d3.setContent(html_15618d765ae93d33026a403ef7f0d04b);
+            
+        
+
+        circle_marker_e7a7f75dce7008c58b8d2d50d0cdb770.bindPopup(popup_d9a15b30a5f98f2f29b400d00dd782d3)
+        ;
+
+        
+    
+    
+            var circle_marker_8da66c38ac8711ba0494c44c1d382415 = L.circleMarker(
+                [13.011021298113208, 77.58360525849058],
+                {"bubblingMouseEvents": true, "color": "#3388ff", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#3388ff", "fillOpacity": 0.45, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 6, "stroke": true, "weight": 3}
+            ).addTo(map_dc33bd00c106e59a4d48a18d00f69560);
+        
+    
+        var popup_96a44fd6db4641137e595c5f4d90c003 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_f313173e265592e9222c4ac0991ffd92 = $(`<div id="html_f313173e265592e9222c4ac0991ffd92" style="width: 100.0%; height: 100.0%;"><b>Cluster 21</b><br>Violations: 53<br>Congestion score: 89<br>Top junction: BTP030 - Mekhri Circle</div>`)[0];
+                popup_96a44fd6db4641137e595c5f4d90c003.setContent(html_f313173e265592e9222c4ac0991ffd92);
+            
+        
+
+        circle_marker_8da66c38ac8711ba0494c44c1d382415.bindPopup(popup_96a44fd6db4641137e595c5f4d90c003)
+        ;
+
+        
+    
+</script>
+</html>
